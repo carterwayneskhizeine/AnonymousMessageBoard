@@ -19,9 +19,14 @@ document.addEventListener('DOMContentLoaded', () => {
         button.textContent = text;
         button.dataset.id = id;
         button.dataset.action = action;
-        const colors = action === 'delete' 
-            ? 'bg-red-700 hover:bg-red-800' 
-            : 'bg-blue-600 hover:bg-blue-700';
+        let colors = '';
+        if (action === 'delete') {
+            colors = 'bg-red-700 hover:bg-red-800';
+        } else if (action === 'edit') {
+            colors = 'bg-blue-600 hover:bg-blue-700';
+        } else if (action === 'copy') { 
+            colors = 'bg-gray-600 hover:bg-gray-700';
+        }
         button.className = `text-white text-xs font-bold py-1 px-2 rounded-md transition-colors ${colors}`;
         return button;
     };
@@ -46,6 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const actions = document.createElement('div');
         actions.className = 'flex gap-2';
+        actions.appendChild(createButton('Copy', message.id, 'copy'));
         actions.appendChild(createButton('Edit', message.id, 'edit'));
         actions.appendChild(createButton('Delete', message.id, 'delete'));
         
@@ -117,6 +123,20 @@ document.addEventListener('DOMContentLoaded', () => {
             saveMessage(id);
         } else if (action === 'cancel') {
             fetchAndRenderMessages(); // Easiest way to revert is to re-render
+        } else if (action === 'copy') {
+            const messageToCopy = messages.find(m => m.id == id);
+            if (messageToCopy && navigator.clipboard) {
+                navigator.clipboard.writeText(messageToCopy.content)
+                    .then(() => {
+                        alert('Message copied to clipboard!');
+                    })
+                    .catch(err => {
+                        console.error('Failed to copy message: ', err);
+                        alert('Failed to copy message.');
+                    });
+            } else {
+                alert('Clipboard API not supported or message not found.');
+            }
         }
     };
     
