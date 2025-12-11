@@ -138,16 +138,21 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (action === 'save') {
             saveMessage(id);
         } else if (action === 'cancel') {
-            fetchAndRenderMessages(); // Easiest way to revert is to re-render
+            const originalMessage = messages.find(m => m.id == id);
+            if (originalMessage) {
+                const messageElement = document.querySelector(`[data-message-id='${id}']`);
+                const restoredElement = renderMessage(originalMessage);
+                messageElement.replaceWith(restoredElement);
+            }
         } else if (action === 'copy') {
             const messageToCopy = messages.find(m => m.id == id);
             if (messageToCopy && navigator.clipboard) {
                 navigator.clipboard.writeText(messageToCopy.content)
                     .then(() => {
-                        const originalText = button.textContent;
+                        const originalHTML = button.innerHTML;
                         button.textContent = 'Copied!';
                         setTimeout(() => {
-                            button.textContent = originalText;
+                            button.innerHTML = originalHTML;
                         }, 1500);
                     })
                     .catch(err => {
@@ -161,16 +166,30 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     const deleteMessage = async (id) => {
+        const messageElement = document.querySelector(`[data-message-id='${id}']`);
+        const originalIndex = messages.findIndex(m => m.id == id);
+        const originalMessage = messages[originalIndex];
+
+        // Optimistically remove from DOM
+        if (messageElement) {
+            messageElement.remove();
+        }
+        // And from local state
+        messages = messages.filter(m => m.id != id);
+
         try {
             const response = await fetch(`/api/messages/${id}`, { method: 'DELETE' });
-            if (response.status === 204) {
-                fetchAndRenderMessages();
-            } else {
-                throw new Error('Failed to delete message.');
+            if (response.status !== 204) {
+                throw new Error('Server failed to delete message.');
             }
         } catch (error) {
             console.error('Error:', error);
             alert(error.message);
+            // On error, restore the message in the local array and re-render
+            if(originalMessage && originalIndex !== -1) {
+                messages.splice(originalIndex, 0, originalMessage);
+            }
+            fetchAndRenderMessages(); // Fallback to full render on error
         }
     };
     
@@ -187,7 +206,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({ content })
             });
             if (response.ok) {
-                fetchAndRenderMessages();
+                const updatedMessage = await response.json();
+            
+                // Update local messages array
+                const index = messages.findIndex(m => m.id == id);
+                if (index !== -1) {
+                    messages[index] = updatedMessage;
+                }
+
+                // Create a new rendered element for the updated message
+                const newMessageElement = renderMessage(updatedMessage);
+                
+                // Replace the old element with the new one
+                messageElement.replaceWith(newMessageElement);
             } else {
                 throw new Error('Failed to save message.');
             }
