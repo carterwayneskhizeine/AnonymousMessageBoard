@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let colors = '';
         // Apply gray color scheme to all buttons
         colors = 'bg-gray-600 hover:bg-gray-700';
-        button.className = `text-white p-2 rounded-md transition-colors ${colors}`;
+        button.className = `text-white text-sm p-2 rounded-md transition-colors ${colors}`;
         return button;
     };
 
