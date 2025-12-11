@@ -87,6 +87,15 @@ console.log("Hello Markdown!");
 
 ```
 
+## Database Migration
+
+This project uses SQLite for its database, which stores all data in a single file named `messages.db`. This file is persisted on your host machine in the `./data/` directory, thanks to a Docker volume. Migrating your messages to another Docker device is straightforward:
+
+1.  **On the Source Device**: Locate the `data/messages.db` file within your project directory.
+2.  **Transfer the File**: Copy this `messages.db` file to your new device using your preferred method (e.g., `scp`, USB drive, cloud storage).
+3.  **On the New Device**: Place the copied `messages.db` file into the `data/` directory of your project on the new device. Ensure it replaces any existing `messages.db` file if you want to use the old data.
+4.  **Start the Application**: Run `docker-compose up -d` on the new device. Your application will automatically use the migrated database, and all your messages will be available.
+
 ## Project Structure
 
 *   `./data/`: Contains the `messages.db` SQLite database file (persisted via Docker volume).
