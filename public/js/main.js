@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const keyButton = document.getElementById('key-button');
     const privateKeyInput = document.getElementById('private-key-input');
     const sendKeyButton = document.getElementById('send-key-button');
+    const postMessageButton = document.getElementById('post-message-button');
     const messageTypeModal = document.getElementById('message-type-modal');
     const publicOption = document.getElementById('public-option');
     const privateOption = document.getElementById('private-option');
@@ -339,13 +340,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // KEY 按钮事件监听器
     keyButton.addEventListener('click', (e) => {
         e.preventDefault();
-        privateKeyInput.classList.toggle('hidden');
-        sendKeyButton.classList.toggle('hidden');
-        if (!privateKeyInput.classList.contains('hidden')) {
-            privateKeyInput.focus();
-        } else {
+        const isShowingKeyInput = !privateKeyInput.classList.contains('hidden');
+
+        if (isShowingKeyInput) {
+            // 隐藏 KEY 输入框和 Send 按钮，显示 Post Message 按钮
+            privateKeyInput.classList.add('hidden');
+            sendKeyButton.classList.add('hidden');
+            postMessageButton.classList.remove('hidden');
             privateKeyInput.value = '';
-            fetchAndRenderMessages(); // 隐藏时重新加载（只显示 public）
+            fetchAndRenderMessages(); // 重新加载（只显示 public）
+        } else {
+            // 显示 KEY 输入框和 Send 按钮，隐藏 Post Message 按钮
+            privateKeyInput.classList.remove('hidden');
+            sendKeyButton.classList.remove('hidden');
+            postMessageButton.classList.add('hidden');
+            privateKeyInput.focus();
         }
     });
 
