@@ -209,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     : messages.some(m => m.is_private === 1);
 
                 if (!hasPrivateMessages) {
-                    errorMessage.textContent = '没有找到匹配的消息';
+                    errorMessage.textContent = 'No matching message found';
                     errorMessage.classList.remove('hidden');
                 } else {
                     errorMessage.classList.add('hidden');
