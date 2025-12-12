@@ -247,7 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const editInput = document.createElement('textarea');
         editInput.className = 'w-full p-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none transition-shadow text-gray-200';
         editInput.value = originalMessage.content;
-        editInput.rows = 4;
+        editInput.rows = 8;
 
         // Create new action buttons
         const saveButton = createButton('Save', id, 'save');
