@@ -130,6 +130,357 @@ Once the Docker containers are up and running, open your web browser and navigat
     - Their own private messages (no KEY required)
     - KEY-protected private messages (by entering the KEY)
 
+### API Usage with curl
+
+You can interact with the message board API directly using `curl` commands. This is useful for testing, automation, or integration with other tools.
+
+#### Basic Message Operations
+
+**1. Get all public messages**
+```bash
+curl -s "http://localhost:1989/api/messages"
+```
+
+**2. Post a public message**
+```bash
+curl -s -X POST "http://localhost:1989/api/messages" \
+  -H "Content-Type: application/json" \
+  -d "{\"content\": \"Your message here\"}"
+```
+
+**3. Post a private message with KEY**
+```bash
+curl -s -X POST "http://localhost:1989/api/messages" \
+  -H "Content-Type: application/json" \
+  -d "{\"content\": \"Secret message\", \"isPrivate\": true, \"privateKey\": \"your-secret-key\"}"
+```
+
+**4. View private messages with KEY**
+```bash
+curl -s "http://localhost:1989/api/messages?privateKey=your-secret-key"
+```
+
+#### User Authentication API
+
+**5. Register a new user**
+```bash
+curl -s -X POST "http://localhost:1989/api/auth/register" \
+  -H "Content-Type: application/json" \
+  -d "{\"username\": \"testuser\", \"password\": \"password123\"}"
+```
+
+**6. Login (creates a session cookie)**
+```bash
+curl -s -X POST "http://localhost:1989/api/auth/login" \
+  -H "Content-Type: application/json" \
+  -d "{\"username\": \"testuser\", \"password\": \"password123\"}" \
+  -c cookies.txt
+```
+
+**7. Get current user info (with session cookie)**
+```bash
+curl -s "http://localhost:1989/api/auth/me" \
+  -b cookies.txt
+```
+
+**8. Logout**
+```bash
+curl -s -X POST "http://localhost:1989/api/auth/logout" \
+  -b cookies.txt
+```
+
+#### Advanced Examples
+
+**9. Post message as logged-in user (with session cookie)**
+```bash
+curl -s -X POST "http://localhost:1989/api/messages" \
+  -H "Content-Type: application/json" \
+  -d "{\"content\": \"Message from logged-in user\"}" \
+  -b cookies.txt
+```
+
+**10. Post private message as logged-in user (auto-generates KEY)**
+```bash
+curl -s -X POST "http://localhost:1989/api/messages" \
+  -H "Content-Type: application/json" \
+  -d "{\"content\": \"Private message from user\", \"isPrivate\": true}" \
+  -b cookies.txt
+```
+
+**11. Get messages for logged-in user (shows user's private messages)**
+```bash
+curl -s "http://localhost:1989/api/messages" \
+  -b cookies.txt
+```
+
+#### Response Format Examples
+
+**Successful message post response:**
+```json
+{
+  "id": 5,
+  "content": "Your message",
+  "timestamp": "2025-12-12 14:04:51",
+  "is_private": 0,
+  "private_key": null,
+  "user_id": null
+}
+```
+
+**Messages list response:**
+```json
+{
+  "messages": [
+    {
+      "id": 1,
+      "content": "Public message",
+      "timestamp": "2025-12-12 14:03:29",
+      "is_private": 0,
+      "private_key": null,
+      "user_id": null
+    }
+  ],
+  "hasPrivateMessages": false,
+  "privateKeyProvided": false,
+  "userId": null
+}
+```
+
+#### Tips
+- Use `-s` flag for silent mode (no progress meter)
+- Use `-v` flag for verbose output to see request/response headers
+- Save cookies with `-c cookies.txt` and reuse with `-b cookies.txt`
+- For Windows PowerShell, use double quotes and escape inner quotes with backtick (`)
+- For Windows CMD, use double quotes and escape inner quotes with backslash (\\)
+
+#### Using JavaScript (Fetch API)
+
+**1. Get all public messages**
+```javascript
+fetch('http://localhost:1989/api/messages')
+  .then(response => response.json())
+  .then(data => console.log(data))
+  .catch(error => console.error('Error:', error));
+```
+
+**2. Post a public message**
+```javascript
+fetch('http://localhost:1989/api/messages', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    content: 'Your message here'
+  })
+})
+.then(response => response.json())
+.then(data => console.log('Message posted:', data))
+.catch(error => console.error('Error:', error));
+```
+
+**3. Post a private message with KEY**
+```javascript
+fetch('http://localhost:1989/api/messages', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    content: 'Secret message',
+    isPrivate: true,
+    privateKey: 'your-secret-key'
+  })
+})
+.then(response => response.json())
+.then(data => console.log('Private message posted:', data))
+.catch(error => console.error('Error:', error));
+```
+
+**4. Register a new user**
+```javascript
+fetch('http://localhost:1989/api/auth/register', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    username: 'testuser',
+    password: 'password123'
+  })
+})
+.then(response => response.json())
+.then(data => console.log('User registered:', data))
+.catch(error => console.error('Error:', error));
+```
+
+**5. Login and maintain session**
+```javascript
+fetch('http://localhost:1989/api/auth/login', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  credentials: 'include', // Important for session cookies
+  body: JSON.stringify({
+    username: 'testuser',
+    password: 'password123'
+  })
+})
+.then(response => response.json())
+.then(data => console.log('Logged in:', data))
+.catch(error => console.error('Error:', error));
+```
+
+#### Using Python (requests library)
+
+First install the requests library:
+```bash
+pip install requests
+```
+
+**1. Get all public messages**
+```python
+import requests
+
+response = requests.get('http://localhost:1989/api/messages')
+print(response.json())
+```
+
+**2. Post a public message**
+```python
+import requests
+
+data = {
+    'content': 'Your message here'
+}
+response = requests.post('http://localhost:1989/api/messages', json=data)
+print('Message posted:', response.json())
+```
+
+**3. Post a private message with KEY**
+```python
+import requests
+
+data = {
+    'content': 'Secret message',
+    'isPrivate': True,
+    'privateKey': 'your-secret-key'
+}
+response = requests.post('http://localhost:1989/api/messages', json=data)
+print('Private message posted:', response.json())
+```
+
+**4. Register a new user**
+```python
+import requests
+
+data = {
+    'username': 'testuser',
+    'password': 'password123'
+}
+response = requests.post('http://localhost:1989/api/auth/register', json=data)
+print('User registered:', response.json())
+```
+
+**5. Login and maintain session with cookies**
+```python
+import requests
+
+# Create a session to maintain cookies
+session = requests.Session()
+
+# Login
+login_data = {
+    'username': 'testuser',
+    'password': 'password123'
+}
+login_response = session.post('http://localhost:1989/api/auth/login', json=login_data)
+print('Logged in:', login_response.json())
+
+# Get messages as logged-in user
+messages_response = session.get('http://localhost:1989/api/messages')
+print('Messages for logged-in user:', messages_response.json())
+
+# Post message as logged-in user
+post_data = {
+    'content': 'Message from logged-in user via Python'
+}
+post_response = session.post('http://localhost:1989/api/messages', json=post_data)
+print('Message posted:', post_response.json())
+
+# Logout
+logout_response = session.post('http://localhost:1989/api/auth/logout')
+print('Logged out:', logout_response.status_code)
+```
+
+**6. Using async/await with aiohttp (Python)**
+```python
+import aiohttp
+import asyncio
+
+async def main():
+    async with aiohttp.ClientSession() as session:
+        # Get messages
+        async with session.get('http://localhost:1989/api/messages') as response:
+            messages = await response.json()
+            print('Messages:', messages)
+
+        # Post a message
+        data = {'content': 'Async message from Python'}
+        async with session.post('http://localhost:1989/api/messages', json=data) as response:
+            result = await response.json()
+            print('Posted:', result)
+
+# Run the async function
+asyncio.run(main())
+```
+
+#### Using Node.js
+
+**1. Get all public messages**
+```javascript
+const https = require('https'); // or 'http' if not using SSL
+
+const options = {
+  hostname: 'localhost',
+  port: 1989,
+  path: '/api/messages',
+  method: 'GET'
+};
+
+const req = https.request(options, (res) => {
+  let data = '';
+  res.on('data', (chunk) => {
+    data += chunk;
+  });
+  res.on('end', () => {
+    console.log(JSON.parse(data));
+  });
+});
+
+req.on('error', (error) => {
+  console.error('Error:', error);
+});
+
+req.end();
+```
+
+**2. Post a public message (Node.js with axios)**
+```javascript
+const axios = require('axios');
+
+axios.post('http://localhost:1989/api/messages', {
+  content: 'Message from Node.js'
+})
+.then(response => {
+  console.log('Message posted:', response.data);
+})
+.catch(error => {
+  console.error('Error:', error);
+});
+```
+
 ### Markdown Examples
 
 You can use standard Markdown syntax in your messages, for example:

@@ -30,7 +30,8 @@ const db = new sqlite3.Database(dbPath, (err) => {
       content TEXT NOT NULL,
       timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
       is_private INTEGER DEFAULT 0,
-      private_key TEXT DEFAULT NULL
+      private_key TEXT DEFAULT NULL,
+      user_id INTEGER DEFAULT NULL
     )`);
 
     // 确保现有表也有新字段（如果表已存在但缺少字段）
