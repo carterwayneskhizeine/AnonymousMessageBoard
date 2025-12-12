@@ -13,6 +13,9 @@ A simple, anonymous message board web application built with Node.js, Express, E
 *   **Markdown Support**: Write messages using Markdown syntax (headings, bold, italics, lists, code blocks, etc.), which will be rendered beautifully.
 *   **Edit & Delete Messages**: Users can edit their previously posted messages or delete them.
 *   **Private Messages with KEY Protection**: Post private messages protected by a KEY. Only users who know the correct KEY can view these messages.
+*   **User Authentication**: Register and login system with session-based authentication.
+*   **User-Specific Private Messages**: Logged-in users can view all their private messages without entering KEYs individually.
+*   **Message Ownership**: Users can only edit and delete their own messages.
 *   **Responsive Design**: The application is designed to be accessible and usable across various devices, with mobile-friendly buttons.
 *   **Dockerized Deployment**: Easy setup and deployment using Docker and Docker Compose.
 
@@ -20,6 +23,7 @@ A simple, anonymous message board web application built with Node.js, Express, E
 
 *   **Backend**: Node.js (Latest Alpine) with Express.js
 *   **Database**: SQLite3
+*   **Authentication**: Express Session with SQLite session store, bcrypt for password hashing
 *   **Templating**: EJS
 *   **Styling**: Tailwind CSS (configured for `darkMode: 'class'`)
 *   **Client-side Logic**: Native JavaScript (Fetch API)
@@ -90,6 +94,42 @@ Once the Docker containers are up and running, open your web browser and navigat
     *   Refresh the page - private messages are automatically hidden on page refresh
     *   Private messages require re-entering the KEY to view again
 
+### User Authentication
+
+#### Registration and Login
+*   **Register a New Account**:
+    1. Click the "Login" button in the top-right corner of the page
+    2. In the login modal, click the "Register" button in the bottom-left corner
+    3. Fill in the registration form:
+        - Username (3-20 characters)
+        - Password (at least 6 characters)
+        - Confirm password
+    4. Click "Register" to create your account
+    *Note: After successful registration, you will be automatically logged in*
+
+*   **Login to Existing Account**:
+    1. Click the "Login" button in the top-right corner
+    2. Enter your username and password
+    3. Click "Login"
+    *Note: Login status is maintained via session cookies*
+
+*   **Logout**:
+    - Click the "登出" button in the top-right corner when logged in
+
+#### User-Specific Features
+*   **Automatic Private Message Access**: Once logged in, all your private messages are automatically displayed without needing to enter KEYs.
+*   **Message Ownership**: You can only edit and delete messages that you created while logged in.
+*   **Dual-Mode Private Messages**:
+    - **Traditional Mode**: Create private messages with KEYs (works for both logged-in and anonymous users)
+    - **User Mode**: When logged in, private messages are automatically associated with your account and accessible without KEYs
+
+#### Backward Compatibility
+*   Existing private messages with KEYs continue to work as before
+*   Anonymous users can still create and view private messages using KEYs
+*   Logged-in users can access both types of private messages:
+    - Their own private messages (no KEY required)
+    - KEY-protected private messages (by entering the KEY)
+
 ### Markdown Examples
 
 You can use standard Markdown syntax in your messages, for example:
@@ -131,8 +171,9 @@ This project uses SQLite for its database, which stores all data in a single fil
 *   `tailwind.config.js`: Tailwind CSS configuration.
 *   `.gitignore`: Specifies intentionally untracked files to ignore.
 
-### Key Modifications for Private Messages Feature
+### Key Modifications for Features
 
+#### Private Messages Feature
 The following files were modified to implement the private messages feature:
 
 1. **`src/index.js`**:
@@ -153,6 +194,44 @@ The following files were modified to implement the private messages feature:
    - Updated message loading to filter by private KEY
    - Added error handling for invalid KEY input
 
+#### User Authentication Feature
+The following modifications were made to implement user authentication:
+
+1. **`package.json`**:
+   - Added new dependencies: `bcrypt`, `express-session`, `connect-sqlite3`
+
+2. **`src/index.js`**:
+   - Added `users` table with `id`, `username`, `password_hash`, `created_at` columns
+   - Added `user_id` column to `messages` table for message ownership
+   - Added session middleware with SQLite session store
+   - Added password utility functions (`hashPassword`, `comparePassword`)
+   - Added authentication APIs:
+     - `POST /api/auth/register` - User registration
+     - `POST /api/auth/login` - User login
+     - `POST /api/auth/logout` - User logout
+     - `GET /api/auth/me` - Get current user info
+   - Modified message APIs to support user authentication:
+     - `GET /api/messages` - Returns public messages + user's private messages when logged in
+     - `POST /api/messages` - Associates messages with user_id when logged in
+     - `PUT /api/messages/:id` - Added permission check (users can only edit their own messages)
+     - `DELETE /api/messages/:id` - Added permission check (users can only delete their own messages)
+   - Added authentication middleware (`requireAuth`, `getCurrentUser`)
+
+3. **`views/index.ejs`**:
+   - Added user area in header with login button (top-right corner)
+   - Added login modal with registration button in bottom-left corner
+   - Added registration modal
+   - Added conditional rendering based on user login status
+   - Added user view with username display and logout button
+
+4. **`public/js/main.js`**:
+   - Added authentication-related DOM elements
+   - Added authentication helper functions (`updateUIForUser`, `checkAuthStatus`, `showError`, `clearError`)
+   - Modified `fetchAndRenderMessages` to handle user authentication
+   - Added event handlers for login, registration, and logout
+   - Modified message posting logic for logged-in users
+   - Added registration flow from login modal
+
 ## Development
 
 If you make changes to the code, especially to `package.json`, `src/index.js`, `public/js/main.js`, `src/input.css`, `tailwind.config.js`, or the `Dockerfile`, you will need to rebuild the Docker image to apply these changes:
@@ -163,9 +242,18 @@ docker-compose up --build -d
 
 This ensures that any new dependencies are installed, CSS is recompiled, and your latest code is included in the running container.
 
-### Database Migration for Private Messages
+### Database Migration
 
+#### For Private Messages Feature
 When upgrading from a previous version without private messages support, the database will be automatically migrated to include the new `is_private` and `private_key` columns. All existing messages will be marked as public (`is_private = 0`).
+
+#### For User Authentication Feature
+When upgrading to the version with user authentication, the database will be automatically migrated to include:
+- `users` table for storing user accounts
+- `user_id` column in `messages` table for message ownership
+- `sessions` table for session storage (managed by `connect-sqlite3`)
+
+All existing messages will have `user_id` set to `NULL` (anonymous messages).
 
 ## License
 

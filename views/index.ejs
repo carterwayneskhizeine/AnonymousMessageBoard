@@ -24,18 +24,15 @@
                 <!-- Guest view (not logged in) -->
                 <div id="guest-view" class="<%= user ? 'hidden' : '' %>">
                     <button id="login-btn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-                        登录
-                    </button>
-                    <button id="register-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors ml-2">
-                        注册
+                        Login
                     </button>
                 </div>
 
                 <!-- User view (logged in) -->
                 <div id="user-view" class="<%= user ? '' : 'hidden' %> flex items-center gap-3">
-                    <span class="text-gray-300">欢迎, <span id="username-display"><%= user ? user.username : '' %></span></span>
-                    <button id="logout-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-                        登出
+                    <span class="text-gray-300">Welcome, <span id="username-display"><%= user ? user.username : '' %></span></span>
+                    <button id="logout-btn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                        Logout
                     </button>
                 </div>
             </div>
@@ -114,41 +111,46 @@
 
         <!-- Login Modal -->
         <dialog id="login-modal" class="bg-gray-800 text-gray-200 p-6 rounded-lg shadow-lg border border-gray-700 backdrop:bg-black backdrop:bg-opacity-50">
-            <h2 class="text-xl font-bold mb-4 text-teal-400">登录</h2>
+            <h2 class="text-xl font-bold mb-4 text-teal-400">Login</h2>
             <form id="login-form" class="space-y-4">
-                <input type="text" id="login-username" placeholder="用户名"
+                <input type="text" id="login-username" placeholder="Username"
                        class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none text-gray-200">
-                <input type="password" id="login-password" placeholder="密码"
+                <input type="password" id="login-password" placeholder="Password"
                        class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none text-gray-200">
                 <div id="login-error" class="text-red-400 text-sm hidden"></div>
-                <div class="flex justify-end gap-2">
-                    <button type="button" id="cancel-login" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-                        取消
+                <div class="flex justify-between items-center">
+                    <button type="button" id="register-from-login" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                        Register
                     </button>
-                    <button type="submit" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-                        登录
-                    </button>
+                    <div class="flex gap-2">
+                        <button type="button" id="cancel-login" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                            Login
+                        </button>
+                    </div>
                 </div>
             </form>
         </dialog>
 
         <!-- Register Modal -->
         <dialog id="register-modal" class="bg-gray-800 text-gray-200 p-6 rounded-lg shadow-lg border border-gray-700 backdrop:bg-black backdrop:bg-opacity-50">
-            <h2 class="text-xl font-bold mb-4 text-teal-400">注册</h2>
+            <h2 class="text-xl font-bold mb-4 text-teal-400">Register</h2>
             <form id="register-form" class="space-y-4">
-                <input type="text" id="register-username" placeholder="用户名 (3-20个字符)"
+                <input type="text" id="register-username" placeholder="Username (3-20 characters)"
                        class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none text-gray-200">
-                <input type="password" id="register-password" placeholder="密码 (至少6个字符)"
+                <input type="password" id="register-password" placeholder="Password (at least 6 characters)"
                        class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none text-gray-200">
-                <input type="password" id="register-confirm-password" placeholder="确认密码"
+                <input type="password" id="register-confirm-password" placeholder="Confirm Password"
                        class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none text-gray-200">
                 <div id="register-error" class="text-red-400 text-sm hidden"></div>
                 <div class="flex justify-end gap-2">
                     <button type="button" id="cancel-register" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-                        取消
+                        Cancel
                     </button>
                     <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-                        注册
+                        Register
                     </button>
                 </div>
             </form>

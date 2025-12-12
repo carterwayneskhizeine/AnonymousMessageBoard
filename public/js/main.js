@@ -39,6 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const cancelRegister = document.getElementById('cancel-register');
     const loginError = document.getElementById('login-error');
     const registerError = document.getElementById('register-error');
+    const registerFromLoginBtn = document.getElementById('register-from-login');
     
     // --- Global State and Instances ---
     let messages = [];
@@ -495,12 +496,17 @@ document.addEventListener('DOMContentLoaded', () => {
         loginModal.showModal();
     });
 
-    // Register button
-    registerBtn.addEventListener('click', () => {
+    // Register from login button (in login modal)
+    registerFromLoginBtn.addEventListener('click', () => {
+        // Close login modal
+        loginModal.close();
+        // Clear any errors
         clearError(registerError);
+        // Clear form fields
         registerUsername.value = '';
         registerPassword.value = '';
         registerConfirmPassword.value = '';
+        // Show register modal
         registerModal.showModal();
     });
 
@@ -533,7 +539,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const password = loginPassword.value.trim();
 
         if (!username || !password) {
-            showError(loginError, '用户名和密码不能为空');
+            showError(loginError, 'Username and password cannot be empty');
             return;
         }
 
@@ -551,11 +557,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateUIForUser(data.user);
                 fetchAndRenderMessages(); // 重新加载消息（显示用户的私有消息）
             } else {
-                showError(loginError, data.error || '登录失败');
+                showError(loginError, data.error || 'Login failed');
             }
         } catch (error) {
             console.error('Login error:', error);
-            showError(loginError, '网络错误，请重试');
+            showError(loginError, 'Network error, please try again');
         }
     });
 
@@ -569,22 +575,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const confirmPassword = registerConfirmPassword.value.trim();
 
         if (!username || !password || !confirmPassword) {
-            showError(registerError, '所有字段都不能为空');
+            showError(registerError, 'All fields are required');
             return;
         }
 
         if (password !== confirmPassword) {
-            showError(registerError, '两次输入的密码不一致');
+            showError(registerError, 'Passwords do not match');
             return;
         }
 
         if (username.length < 3 || username.length > 20) {
-            showError(registerError, '用户名长度必须在3-20个字符之间');
+            showError(registerError, 'Username must be between 3-20 characters');
             return;
         }
 
         if (password.length < 6) {
-            showError(registerError, '密码长度至少6个字符');
+            showError(registerError, 'Password must be at least 6 characters');
             return;
         }
 
@@ -599,14 +605,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (response.ok) {
                 registerModal.close();
+                // Clear login form errors
+                clearError(loginError);
+                loginUsername.value = '';
+                loginPassword.value = '';
                 updateUIForUser(data.user);
                 fetchAndRenderMessages(); // 重新加载消息
             } else {
-                showError(registerError, data.error || '注册失败');
+                showError(registerError, data.error || 'Registration failed');
             }
         } catch (error) {
             console.error('Register error:', error);
-            showError(registerError, '网络错误，请重试');
+            showError(registerError, 'Network error, please try again');
         }
     });
 
@@ -618,6 +628,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Cancel register
     cancelRegister.addEventListener('click', () => {
         registerModal.close();
+        // Clear login form errors and show login modal
+        clearError(loginError);
+        loginModal.showModal();
     });
 
     // Close modals when clicking outside
@@ -630,6 +643,9 @@ document.addEventListener('DOMContentLoaded', () => {
     registerModal.addEventListener('click', (e) => {
         if (e.target === registerModal) {
             registerModal.close();
+            // Clear login form errors and show login modal
+            clearError(loginError);
+            loginModal.showModal();
         }
     });
 
