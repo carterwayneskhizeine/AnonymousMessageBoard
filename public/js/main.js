@@ -124,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Main Rendering Function ---
     const renderMessage = (message) => {
         const messageElement = document.createElement('div');
-        messageElement.className = 'bg-gray-800 p-4 rounded-lg shadow-md animate-fade-in flex flex-col';
+        messageElement.className = 'bg-gray-800 p-4 rounded-lg shadow-md animate-fade-in flex flex-col group';
         messageElement.dataset.messageId = message.id;
 
         // Convert markdown to HTML and apply typography styles
@@ -157,7 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         const actions = document.createElement('div');
-        actions.className = 'flex gap-2';
+        actions.className = 'flex gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200';
         actions.appendChild(createButton('Copy', message.id, 'copy'));
         actions.appendChild(createButton('Edit', message.id, 'edit'));
         actions.appendChild(createButton('Delete', message.id, 'delete'));
