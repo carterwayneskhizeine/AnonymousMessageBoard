@@ -18,9 +18,31 @@ document.addEventListener('DOMContentLoaded', () => {
     const confirmPrivate = document.getElementById('confirm-private');
     const cancelPrivate = document.getElementById('cancel-private');
     const errorMessage = document.getElementById('error-message');
+
+    // 认证相关 DOM 元素
+    const loginBtn = document.getElementById('login-btn');
+    const registerBtn = document.getElementById('register-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    const guestView = document.getElementById('guest-view');
+    const userView = document.getElementById('user-view');
+    const usernameDisplay = document.getElementById('username-display');
+    const loginModal = document.getElementById('login-modal');
+    const registerModal = document.getElementById('register-modal');
+    const loginForm = document.getElementById('login-form');
+    const registerForm = document.getElementById('register-form');
+    const loginUsername = document.getElementById('login-username');
+    const loginPassword = document.getElementById('login-password');
+    const registerUsername = document.getElementById('register-username');
+    const registerPassword = document.getElementById('register-password');
+    const registerConfirmPassword = document.getElementById('register-confirm-password');
+    const cancelLogin = document.getElementById('cancel-login');
+    const cancelRegister = document.getElementById('cancel-register');
+    const loginError = document.getElementById('login-error');
+    const registerError = document.getElementById('register-error');
     
     // --- Global State and Instances ---
     let messages = [];
+    let currentUser = null;
     const converter = new showdown.Converter({
         ghCompatibleHeaderId: true,
         strikethrough: true,
@@ -48,6 +70,54 @@ document.addEventListener('DOMContentLoaded', () => {
         colors = 'bg-gray-600 hover:bg-gray-700';
         button.className = `text-white text-sm p-2 rounded-md transition-colors ${colors}`;
         return button;
+    };
+
+    // --- Authentication Helper Functions ---
+    const updateUIForUser = (user) => {
+        if (user) {
+            currentUser = user;
+            guestView.classList.add('hidden');
+            userView.classList.remove('hidden');
+            usernameDisplay.textContent = user.username;
+
+            // 如果用户已登录，隐藏KEY输入框（因为会自动显示私有消息）
+            if (privateKeyInput.classList.contains('hidden')) {
+                // KEY输入框已隐藏，不需要操作
+            } else {
+                // 如果KEY输入框显示，隐藏它并重新加载消息
+                privateKeyInput.classList.add('hidden');
+                sendKeyButton.classList.add('hidden');
+                fetchAndRenderMessages();
+            }
+        } else {
+            currentUser = null;
+            guestView.classList.remove('hidden');
+            userView.classList.add('hidden');
+        }
+    };
+
+    const showError = (element, message) => {
+        element.textContent = message;
+        element.classList.remove('hidden');
+    };
+
+    const clearError = (element) => {
+        element.textContent = '';
+        element.classList.add('hidden');
+    };
+
+    const checkAuthStatus = async () => {
+        try {
+            const response = await fetch('/api/auth/me');
+            if (response.ok) {
+                const data = await response.json();
+                updateUIForUser(data.user);
+                return data.user;
+            }
+        } catch (error) {
+            console.error('Error checking auth status:', error);
+        }
+        return null;
     };
 
     // --- Main Rendering Function ---
@@ -118,6 +188,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             messages = data.messages || data; // 支持两种响应格式
 
+            // 更新用户状态（如果API返回了userId）
+            if (data.userId && !currentUser) {
+                // 如果API返回了userId但前端不知道，重新检查认证状态
+                await checkAuthStatus();
+            }
+
             // 渲染消息
             messageList.innerHTML = '';
             messages.forEach(message => {
@@ -184,8 +260,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     messages.forEach(message => {
                         messageList.appendChild(renderMessage(message));
                     });
+                } else if (currentUser) {
+                    // 如果用户已登录且发送私有消息，立即显示（因为用户可以看到自己的私有消息）
+                    messages.unshift(newMessage);
+                    messageList.innerHTML = '';
+                    messages.forEach(message => {
+                        messageList.appendChild(renderMessage(message));
+                    });
                 }
-                // Private 消息发送后不显示，清空输入框即可
+                // 未登录用户发送的私有消息不显示
 
                 messageInput.value = '';
             } else {
@@ -391,7 +474,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     confirmPrivate.addEventListener('click', async () => {
         const privateKey = modalPrivateKey.value.trim();
-        if (!privateKey) {
+
+        // 如果用户已登录，不需要private_key
+        if (!currentUser && !privateKey) {
             alert('KEY cannot be empty!');
             return;
         }
@@ -399,6 +484,160 @@ document.addEventListener('DOMContentLoaded', () => {
         const content = messageTypeModal.dataset.pendingContent;
         messageTypeModal.close();
         await postMessageToAPI(content, true, privateKey);
+    });
+
+    // --- Authentication Event Handlers ---
+    // Login button
+    loginBtn.addEventListener('click', () => {
+        clearError(loginError);
+        loginUsername.value = '';
+        loginPassword.value = '';
+        loginModal.showModal();
+    });
+
+    // Register button
+    registerBtn.addEventListener('click', () => {
+        clearError(registerError);
+        registerUsername.value = '';
+        registerPassword.value = '';
+        registerConfirmPassword.value = '';
+        registerModal.showModal();
+    });
+
+    // Logout button
+    logoutBtn.addEventListener('click', async () => {
+        try {
+            const response = await fetch('/api/auth/logout', {
+                method: 'POST'
+            });
+
+            if (response.ok) {
+                updateUIForUser(null);
+                fetchAndRenderMessages(); // 重新加载消息（不再显示私有消息）
+            } else {
+                const errorData = await response.json();
+                alert(`登出失败: ${errorData.error || '未知错误'}`);
+            }
+        } catch (error) {
+            console.error('Logout error:', error);
+            alert('登出失败，请重试');
+        }
+    });
+
+    // Login form submission
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        clearError(loginError);
+
+        const username = loginUsername.value.trim();
+        const password = loginPassword.value.trim();
+
+        if (!username || !password) {
+            showError(loginError, '用户名和密码不能为空');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                loginModal.close();
+                updateUIForUser(data.user);
+                fetchAndRenderMessages(); // 重新加载消息（显示用户的私有消息）
+            } else {
+                showError(loginError, data.error || '登录失败');
+            }
+        } catch (error) {
+            console.error('Login error:', error);
+            showError(loginError, '网络错误，请重试');
+        }
+    });
+
+    // Register form submission
+    registerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        clearError(registerError);
+
+        const username = registerUsername.value.trim();
+        const password = registerPassword.value.trim();
+        const confirmPassword = registerConfirmPassword.value.trim();
+
+        if (!username || !password || !confirmPassword) {
+            showError(registerError, '所有字段都不能为空');
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            showError(registerError, '两次输入的密码不一致');
+            return;
+        }
+
+        if (username.length < 3 || username.length > 20) {
+            showError(registerError, '用户名长度必须在3-20个字符之间');
+            return;
+        }
+
+        if (password.length < 6) {
+            showError(registerError, '密码长度至少6个字符');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                registerModal.close();
+                updateUIForUser(data.user);
+                fetchAndRenderMessages(); // 重新加载消息
+            } else {
+                showError(registerError, data.error || '注册失败');
+            }
+        } catch (error) {
+            console.error('Register error:', error);
+            showError(registerError, '网络错误，请重试');
+        }
+    });
+
+    // Cancel login
+    cancelLogin.addEventListener('click', () => {
+        loginModal.close();
+    });
+
+    // Cancel register
+    cancelRegister.addEventListener('click', () => {
+        registerModal.close();
+    });
+
+    // Close modals when clicking outside
+    loginModal.addEventListener('click', (e) => {
+        if (e.target === loginModal) {
+            loginModal.close();
+        }
+    });
+
+    registerModal.addEventListener('click', (e) => {
+        if (e.target === registerModal) {
+            registerModal.close();
+        }
+    });
+
+    // Check authentication status on page load
+    checkAuthStatus().then(user => {
+        if (user) {
+            console.log('User is logged in:', user.username);
+        }
     });
 
     fetchAndRenderMessages();
