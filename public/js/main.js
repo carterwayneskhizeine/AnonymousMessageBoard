@@ -432,6 +432,8 @@ document.addEventListener('DOMContentLoaded', () => {
             sendKeyButton.classList.add('hidden');
             postMessageButton.classList.remove('hidden');
             privateKeyInput.value = '';
+            // 隐藏错误提示
+            errorMessage.classList.add('hidden');
             fetchAndRenderMessages(); // 重新加载（只显示 public）
         } else {
             // 显示 KEY 输入框和 Send 按钮，隐藏 Post Message 按钮

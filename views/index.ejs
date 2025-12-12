@@ -47,27 +47,32 @@
                     rows="3" 
                     placeholder="What's on your mind?"></textarea>
                 <!-- 按钮容器 -->
-                <div class="flex gap-2 items-center">
-                    <!-- KEY 按钮（左侧，深蓝色） -->
-                    <button type="button" id="key-button"
-                            class="bg-blue-800 hover:bg-blue-900 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-                        KEY
-                    </button>
+                <div class="flex flex-col gap-2">
+                    <div class="flex gap-2 items-center">
+                        <!-- KEY 按钮（左侧，深蓝色） -->
+                        <button type="button" id="key-button"
+                                class="bg-blue-800 hover:bg-blue-900 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                            KEY
+                        </button>
 
-                    <!-- KEY 输入框（默认隐藏） -->
-                    <input type="text" id="private-key-input" placeholder="Enter private key"
-                           class="hidden flex-1 p-2 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-gray-200">
+                        <!-- KEY 输入框（默认隐藏） -->
+                        <input type="text" id="private-key-input" placeholder="Enter private key"
+                               class="hidden flex-1 p-2 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-gray-200">
 
-                    <!-- Send 按钮（默认隐藏） -->
-                    <button type="button" id="send-key-button"
-                            class="hidden bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-                        Send
-                    </button>
+                        <!-- Send 按钮（默认隐藏） -->
+                        <button type="button" id="send-key-button"
+                                class="hidden bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                            Send
+                        </button>
 
-                    <!-- Post Message 按钮（右侧，保持原样式和位置） -->
-                    <button type="submit" id="post-message-button" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg transition-colors ml-auto">
-                        Post Message
-                    </button>
+                        <!-- Post Message 按钮（右侧，保持原样式和位置） -->
+                        <button type="submit" id="post-message-button" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg transition-colors ml-auto">
+                            Post Message
+                        </button>
+                    </div>
+
+                    <!-- 错误提示区域（在KEY输入框下方） -->
+                    <div id="error-message" class="hidden text-red-400 text-center font-bold p-3 bg-red-900 bg-opacity-20 rounded-lg border border-red-800" role="alert"></div>
                 </div>
             </form>
         </div>
@@ -76,9 +81,6 @@
         <main id="message-list" class="space-y-4">
             <!-- Messages will be dynamically injected here by JavaScript -->
         </main>
-
-        <!-- 错误提示区域 -->
-        <div id="error-message" class="hidden text-red-400 text-center font-bold mt-4 p-3 bg-red-900 bg-opacity-20 rounded-lg border border-red-800" role="alert"></div>
 
         <!-- 消息类型选择弹窗 -->
         <dialog id="message-type-modal" class="bg-gray-800 text-gray-200 p-6 rounded-lg shadow-lg border border-gray-700 backdrop:bg-black backdrop:bg-opacity-50">
