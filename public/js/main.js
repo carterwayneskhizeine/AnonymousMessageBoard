@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (message.is_private === 1) {
             const privateLabel = document.createElement('div');
             privateLabel.className = 'text-xs text-blue-400 font-bold mb-1 flex items-center gap-1';
-            privateLabel.innerHTML = '🔒 Private';
+            privateLabel.innerHTML = 'Private';
             messageElement.appendChild(privateLabel);
         }
 
@@ -125,7 +125,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 错误提示处理
             if (currentPrivateKey) {
-                const hasPrivateMessages = messages.some(m => m.is_private === 1);
+                // 使用后端返回的 hasPrivateMessages 标志，如果不存在则回退到前端检查
+                const hasPrivateMessages = data.hasPrivateMessages !== undefined
+                    ? data.hasPrivateMessages
+                    : messages.some(m => m.is_private === 1);
+
                 if (!hasPrivateMessages) {
                     errorMessage.textContent = '没有找到匹配的消息';
                     errorMessage.classList.remove('hidden');
