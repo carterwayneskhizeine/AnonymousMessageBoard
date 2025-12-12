@@ -27,11 +27,29 @@
                     class="w-full p-4 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none transition-shadow" 
                     rows="3" 
                     placeholder="What's on your mind?"></textarea>
-                <button 
-                    type="submit"
-                    class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg transition-colors w-full md:w-auto self-end">
-                    Post Message
-                </button>
+                <!-- 按钮容器 -->
+                <div class="flex gap-2 items-center">
+                    <!-- KEY 按钮（左侧，深蓝色） -->
+                    <button type="button" id="key-button"
+                            class="bg-blue-800 hover:bg-blue-900 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                        KEY
+                    </button>
+
+                    <!-- KEY 输入框（默认隐藏） -->
+                    <input type="text" id="private-key-input" placeholder="Enter private key"
+                           class="hidden flex-1 p-2 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-gray-200">
+
+                    <!-- Send 按钮（默认隐藏） -->
+                    <button type="button" id="send-key-button"
+                            class="hidden bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                        Send
+                    </button>
+
+                    <!-- Post Message 按钮（右侧，保持原样式和位置） -->
+                    <button type="submit" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg transition-colors ml-auto">
+                        Post Message
+                    </button>
+                </div>
             </form>
         </div>
 
@@ -39,6 +57,37 @@
         <main id="message-list" class="space-y-4">
             <!-- Messages will be dynamically injected here by JavaScript -->
         </main>
+
+        <!-- 错误提示区域 -->
+        <div id="error-message" class="hidden text-red-400 text-center font-bold mt-4 p-3 bg-red-900 bg-opacity-20 rounded-lg border border-red-800" role="alert"></div>
+
+        <!-- 消息类型选择弹窗 -->
+        <dialog id="message-type-modal" class="bg-gray-800 text-gray-200 p-6 rounded-lg shadow-lg border border-gray-700 backdrop:bg-black backdrop:bg-opacity-50">
+            <h2 class="text-xl font-bold mb-4 text-teal-400">Choose Message Type</h2>
+
+            <div id="type-selection" class="flex flex-col gap-3">
+                <button id="public-option" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                    Public Message
+                </button>
+                <button id="private-option" class="bg-blue-700 hover:bg-blue-800 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                    Private Message
+                </button>
+            </div>
+
+            <div id="private-key-entry" class="hidden mt-4">
+                <label for="modal-private-key" class="block mb-2 text-sm font-bold">Enter a KEY for your private message:</label>
+                <input type="text" id="modal-private-key" placeholder="Any text or symbols..."
+                       class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-gray-200 mb-4">
+                <div class="flex justify-end gap-2">
+                    <button id="cancel-private" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                        Cancel
+                    </button>
+                    <button id="confirm-private" class="bg-blue-700 hover:bg-blue-800 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                        Confirm
+                    </button>
+                </div>
+            </div>
+        </dialog>
 
         <!-- Footer -->
         <footer class="text-center mt-12 text-gray-500">

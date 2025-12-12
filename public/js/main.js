@@ -3,6 +3,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const messageForm = document.getElementById('message-form');
     const messageInput = document.getElementById('message-input');
     const messageList = document.getElementById('message-list');
+
+    // 新增 DOM 元素
+    const keyButton = document.getElementById('key-button');
+    const privateKeyInput = document.getElementById('private-key-input');
+    const sendKeyButton = document.getElementById('send-key-button');
+    const messageTypeModal = document.getElementById('message-type-modal');
+    const publicOption = document.getElementById('public-option');
+    const privateOption = document.getElementById('private-option');
+    const typeSelection = document.getElementById('type-selection');
+    const privateKeyEntry = document.getElementById('private-key-entry');
+    const modalPrivateKey = document.getElementById('modal-private-key');
+    const confirmPrivate = document.getElementById('confirm-private');
+    const cancelPrivate = document.getElementById('cancel-private');
+    const errorMessage = document.getElementById('error-message');
     
     // --- Global State and Instances ---
     let messages = [];
@@ -46,6 +60,14 @@ document.addEventListener('DOMContentLoaded', () => {
         contentDiv.className = 'prose prose-invert max-w-none text-gray-300 mb-2'; // prose-invert for dark mode
         contentDiv.innerHTML = converter.makeHtml(message.content);
 
+        // 为 private 消息添加锁图标
+        if (message.is_private === 1) {
+            const privateLabel = document.createElement('div');
+            privateLabel.className = 'text-xs text-blue-400 font-bold mb-1 flex items-center gap-1';
+            privateLabel.innerHTML = '🔒 Private';
+            messageElement.appendChild(privateLabel);
+        }
+
         const footer = document.createElement('div');
         footer.className = 'flex justify-between items-center';
 
@@ -67,10 +89,10 @@ document.addEventListener('DOMContentLoaded', () => {
         actions.appendChild(createButton('Copy', message.id, 'copy'));
         actions.appendChild(createButton('Edit', message.id, 'edit'));
         actions.appendChild(createButton('Delete', message.id, 'delete'));
-        
+
         footer.appendChild(timestamp);
         footer.appendChild(actions);
-        
+
         messageElement.appendChild(contentDiv);
         messageElement.appendChild(footer);
 
@@ -80,19 +102,43 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- API & Rendering Logic ---
     const fetchAndRenderMessages = async () => {
         try {
-            const response = await fetch('/api/messages');
+            // 获取当前输入的 private key
+            const currentPrivateKey = privateKeyInput.value.trim();
+
+            // 构建 URL
+            let url = '/api/messages';
+            if (currentPrivateKey) {
+                url += `?privateKey=${encodeURIComponent(currentPrivateKey)}`;
+            }
+
+            const response = await fetch(url);
             if (!response.ok) throw new Error('Failed to fetch messages.');
-            
-            // Store messages in global state
-            messages = await response.json();
-            
-            messageList.innerHTML = ''; 
+
+            const data = await response.json();
+            messages = data.messages || data; // 支持两种响应格式
+
+            // 渲染消息
+            messageList.innerHTML = '';
             messages.forEach(message => {
                 messageList.appendChild(renderMessage(message));
             });
+
+            // 错误提示处理
+            if (currentPrivateKey) {
+                const hasPrivateMessages = messages.some(m => m.is_private === 1);
+                if (!hasPrivateMessages) {
+                    errorMessage.textContent = '没有找到匹配的消息';
+                    errorMessage.classList.remove('hidden');
+                } else {
+                    errorMessage.classList.add('hidden');
+                }
+            } else {
+                errorMessage.classList.add('hidden');
+            }
         } catch (error) {
             console.error('Error:', error);
             messageList.innerHTML = '<p class="text-red-500 text-center">Could not load messages.</p>';
+            errorMessage.classList.add('hidden');
         }
     };
 
@@ -102,22 +148,40 @@ document.addEventListener('DOMContentLoaded', () => {
         const content = messageInput.value.trim();
         if (!content) return;
 
+        // 存储消息内容，稍后发送
+        messageTypeModal.dataset.pendingContent = content;
+
+        // 重置模态框状态
+        typeSelection.classList.remove('hidden');
+        privateKeyEntry.classList.add('hidden');
+        modalPrivateKey.value = '';
+
+        // 显示模态框
+        messageTypeModal.showModal();
+    };
+
+    // 发送消息到 API
+    const postMessageToAPI = async (content, isPrivate, privateKey) => {
         try {
             const response = await fetch('/api/messages', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content }),
+                body: JSON.stringify({ content, isPrivate, privateKey }),
             });
 
             if (response.ok) {
                 const newMessage = await response.json();
-                // 将新消息添加到本地数组的开头
-                messages.unshift(newMessage);
-                // 重新渲染消息列表
-                messageList.innerHTML = '';
-                messages.forEach(message => {
-                    messageList.appendChild(renderMessage(message));
-                });
+
+                // 如果是 public 消息，立即显示
+                if (!isPrivate) {
+                    messages.unshift(newMessage);
+                    messageList.innerHTML = '';
+                    messages.forEach(message => {
+                        messageList.appendChild(renderMessage(message));
+                    });
+                }
+                // Private 消息发送后不显示，清空输入框即可
+
                 messageInput.value = '';
             } else {
                 const errorData = await response.json();
@@ -267,6 +331,63 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Initial Setup ---
     messageForm.addEventListener('submit', handlePostSubmit);
     messageList.addEventListener('click', handleMessageClick);
+
+    // KEY 按钮事件监听器
+    keyButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        privateKeyInput.classList.toggle('hidden');
+        sendKeyButton.classList.toggle('hidden');
+        if (!privateKeyInput.classList.contains('hidden')) {
+            privateKeyInput.focus();
+        } else {
+            privateKeyInput.value = '';
+            fetchAndRenderMessages(); // 隐藏时重新加载（只显示 public）
+        }
+    });
+
+    // 监听 KEY 输入框的回车键
+    privateKeyInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            fetchAndRenderMessages();
+        }
+    });
+
+    // Send 按钮点击事件
+    sendKeyButton.addEventListener('click', () => {
+        fetchAndRenderMessages();
+    });
+
+    // 模态框按钮事件监听器
+    publicOption.addEventListener('click', async () => {
+        const content = messageTypeModal.dataset.pendingContent;
+        messageTypeModal.close();
+        await postMessageToAPI(content, false, null);
+    });
+
+    privateOption.addEventListener('click', () => {
+        typeSelection.classList.add('hidden');
+        privateKeyEntry.classList.remove('hidden');
+        modalPrivateKey.focus();
+    });
+
+    cancelPrivate.addEventListener('click', () => {
+        typeSelection.classList.remove('hidden');
+        privateKeyEntry.classList.add('hidden');
+        modalPrivateKey.value = '';
+    });
+
+    confirmPrivate.addEventListener('click', async () => {
+        const privateKey = modalPrivateKey.value.trim();
+        if (!privateKey) {
+            alert('KEY cannot be empty!');
+            return;
+        }
+
+        const content = messageTypeModal.dataset.pendingContent;
+        messageTypeModal.close();
+        await postMessageToAPI(content, true, privateKey);
+    });
+
     fetchAndRenderMessages();
 
     // Add a simple fade-in animation using CSS
