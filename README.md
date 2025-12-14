@@ -40,6 +40,15 @@ You need to have Docker and Docker Compose installed on your system.
 
 *   [Install Docker](https://docs.docker.com/get-docker/)
 
+### Important Note for Cross-Platform Compatibility
+
+sqlite3 is a native Node.js module that needs to be compiled on specific platform architectures. Binaries compiled on Windows are not compatible with Linux Docker containers.
+
+To rebuild the container: Reinstall and recompile all dependencies inside the container
+```bash
+docker compose up --build -d
+```
+
 ### Installation
 
 1.  **Clone the repository:**

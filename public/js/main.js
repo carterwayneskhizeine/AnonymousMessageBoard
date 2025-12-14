@@ -68,8 +68,8 @@ document.addEventListener('DOMContentLoaded', () => {
         button.dataset.action = action;
         let colors = '';
         // Apply gray color scheme to all buttons
-        colors = 'bg-gray-600 hover:bg-gray-700';
-        button.className = `text-white text-sm p-2 rounded-md transition-colors ${colors}`;
+        colors = 'border border-gray-700 hover:border-gray-100 text-gray-400 hover:text-gray-100';
+        button.className = `text-sm p-2 rounded-md transition-colors ${colors}`;
         return button;
     };
 
@@ -124,18 +124,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Main Rendering Function ---
     const renderMessage = (message) => {
         const messageElement = document.createElement('div');
-        messageElement.className = 'bg-gray-800 p-4 rounded-lg shadow-md animate-fade-in flex flex-col group';
+        messageElement.className = 'bg-black border border-gray-800 p-4 rounded-lg shadow-md animate-fade-in flex flex-col group';
         messageElement.dataset.messageId = message.id;
 
         // Convert markdown to HTML and apply typography styles
         const contentDiv = document.createElement('div');
-        contentDiv.className = 'prose prose-invert max-w-none text-gray-300 mb-2'; // prose-invert for dark mode
+        contentDiv.className = 'prose prose-invert max-w-none text-gray-400 mb-2'; // prose-invert for dark mode
         contentDiv.innerHTML = converter.makeHtml(message.content);
 
         // 为 private 消息添加 KEY 显示
         if (message.is_private === 1) {
             const privateLabel = document.createElement('div');
-            privateLabel.className = 'text-xs text-blue-400 font-bold mb-1 flex items-center gap-1';
+            privateLabel.className = 'text-xs text-gray-500 font-bold mb-1 flex items-center gap-1';
 
             // 创建 "Private" 文本
             const privateText = document.createElement('span');
@@ -143,7 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 创建 KEY 显示
             const keyDisplay = document.createElement('span');
-            keyDisplay.className = 'text-gray-300 font-mono text-xs bg-gray-900 px-2 py-1 rounded border border-gray-700 ml-2';
+            keyDisplay.className = 'text-gray-400 font-mono text-xs bg-black px-2 py-1 rounded border border-gray-800 ml-2';
 
             if (message.private_key && message.private_key.trim() !== '') {
                 keyDisplay.textContent = `KEY: ${message.private_key}`;
@@ -157,12 +157,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     navigator.clipboard.writeText(message.private_key).then(() => {
                         const originalText = keyDisplay.textContent;
                         keyDisplay.textContent = 'KEY copied!';
-                        keyDisplay.className = 'text-green-400 font-mono text-xs bg-gray-900 px-2 py-1 rounded border border-green-700 ml-2';
+                        keyDisplay.className = 'text-gray-100 font-mono text-xs bg-black px-2 py-1 rounded border border-gray-100 ml-2';
 
                         // 2秒后恢复原状
                         setTimeout(() => {
                             keyDisplay.textContent = originalText;
-                            keyDisplay.className = 'text-gray-300 font-mono text-xs bg-gray-900 px-2 py-1 rounded border border-gray-700 ml-2';
+                            keyDisplay.className = 'text-gray-400 font-mono text-xs bg-black px-2 py-1 rounded border border-gray-800 ml-2';
                         }, 2000);
                     }).catch(err => {
                         console.error('Failed to copy KEY:', err);
@@ -170,7 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             } else {
                 keyDisplay.textContent = 'KEY: (not set)';
-                keyDisplay.className = 'text-gray-500 font-mono text-xs bg-gray-900 px-2 py-1 rounded border border-gray-700 ml-2';
+                keyDisplay.className = 'text-gray-500 font-mono text-xs bg-black px-2 py-1 rounded border border-gray-800 ml-2';
             }
 
             // 组装所有元素
@@ -184,7 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
         footer.className = 'flex justify-between items-center';
 
         const timestamp = document.createElement('div');
-        timestamp.className = 'text-xs text-gray-500';
+        timestamp.className = 'text-xs text-gray-600';
         timestamp.textContent = new Date(message.timestamp + 'Z').toLocaleString('en-CA', {
             timeZone: 'Asia/Shanghai',
             year: 'numeric',
@@ -438,7 +438,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Create an input area with the raw markdown
         const editInput = document.createElement('textarea');
-        editInput.className = 'w-full p-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none transition-shadow text-gray-200';
+        editInput.className = 'w-full p-2 bg-black border border-gray-800 rounded-lg focus:ring-2 focus:ring-gray-100 focus:outline-none transition-shadow text-gray-400';
         editInput.value = originalMessage.content;
         editInput.rows = 8;
 

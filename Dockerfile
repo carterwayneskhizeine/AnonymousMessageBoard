@@ -1,6 +1,9 @@
 # Use the latest official Node.js Alpine image
 FROM node:alpine
 
+# Install build dependencies for native modules
+RUN apk add --no-cache python3 make g++
+
 # Set the working directory in the container
 WORKDIR /app
 
