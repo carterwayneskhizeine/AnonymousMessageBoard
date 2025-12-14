@@ -132,6 +132,35 @@ document.addEventListener('DOMContentLoaded', () => {
         contentDiv.className = 'prose prose-invert max-w-none text-gray-400 mb-2'; // prose-invert for dark mode
         contentDiv.innerHTML = converter.makeHtml(message.content);
 
+// Add copy buttons to code blocks
+const codeBlocks = contentDiv.querySelectorAll('pre code');
+codeBlocks.forEach((codeBlock) => {
+  const pre = codeBlock.parentElement;
+  if (pre.querySelector('.copy-code-btn')) return; // Avoid duplicates
+
+  pre.classList.add('relative', 'group/code');
+
+  const copyButton = document.createElement('button');
+  copyButton.className = 'copy-code-btn absolute top-2 right-2 bg-black/80 backdrop-blur-sm text-xs px-2 py-1 rounded border border-gray-700 text-gray-400 hover:border-gray-100 hover:text-gray-100 opacity-0 group-hover/code:opacity-100 transition-all duration-200 z-10';
+  copyButton.innerHTML = 'Copy';
+  copyButton.title = 'Copy code';
+  copyButton.onclick = (e) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(codeBlock.textContent.trim())
+      .then(() => {
+        const original = copyButton.innerHTML;
+        copyButton.innerHTML = 'Copied!';
+        copyButton.classList.add('text-green-400', 'border-green-400');
+        setTimeout(() => {
+          copyButton.innerHTML = original;
+          copyButton.classList.remove('text-green-400', 'border-green-400');
+        }, 2000);
+      })
+      .catch(err => console.error('Copy failed:', err));
+  };
+  pre.appendChild(copyButton);
+});
+
         // 为 private 消息添加 KEY 显示
         if (message.is_private === 1) {
             const privateLabel = document.createElement('div');
