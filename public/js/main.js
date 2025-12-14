@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
         button.dataset.action = action;
         let colors = '';
         // Apply gray color scheme to all buttons
-        colors = 'border border-gray-700 hover:border-gray-100 text-gray-400 hover:text-gray-100';
+        colors = 'border border-gray-700 hover:border-gray-100 text-gray-200 hover:text-gray-100';
         button.className = `text-sm p-2 rounded-md transition-colors ${colors}`;
         return button;
     };
@@ -129,7 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Convert markdown to HTML and apply typography styles
         const contentDiv = document.createElement('div');
-        contentDiv.className = 'prose prose-invert max-w-none text-gray-400 mb-2'; // prose-invert for dark mode
+        contentDiv.className = 'prose prose-invert max-w-none text-gray-200 mb-2'; // prose-invert for dark mode
         contentDiv.innerHTML = converter.makeHtml(message.content);
 
 // Add copy buttons to code blocks
@@ -141,7 +141,7 @@ codeBlocks.forEach((codeBlock) => {
   pre.classList.add('relative', 'group/code');
 
   const copyButton = document.createElement('button');
-  copyButton.className = 'copy-code-btn absolute top-2 right-2 bg-black/80 backdrop-blur-sm text-xs px-2 py-1 rounded border border-gray-700 text-gray-400 hover:border-gray-100 hover:text-gray-100 opacity-0 group-hover/code:opacity-100 transition-all duration-200 z-10';
+  copyButton.className = 'copy-code-btn absolute top-2 right-2 bg-black/80 backdrop-blur-sm text-xs px-2 py-1 rounded border border-gray-700 text-gray-200 hover:border-gray-100 hover:text-gray-100 opacity-0 group-hover/code:opacity-100 transition-all duration-200 z-10';
   copyButton.innerHTML = 'Copy';
   copyButton.title = 'Copy code';
   copyButton.onclick = (e) => {
@@ -172,7 +172,7 @@ codeBlocks.forEach((codeBlock) => {
 
             // 创建 KEY 显示
             const keyDisplay = document.createElement('span');
-            keyDisplay.className = 'text-gray-400 font-mono text-xs bg-black px-2 py-1 rounded border border-gray-800 ml-2';
+            keyDisplay.className = 'text-gray-200 font-mono text-xs bg-black px-2 py-1 rounded border border-gray-800 ml-2';
 
             if (message.private_key && message.private_key.trim() !== '') {
                 keyDisplay.textContent = `KEY: ${message.private_key}`;
@@ -191,7 +191,7 @@ codeBlocks.forEach((codeBlock) => {
                         // 2秒后恢复原状
                         setTimeout(() => {
                             keyDisplay.textContent = originalText;
-                            keyDisplay.className = 'text-gray-400 font-mono text-xs bg-black px-2 py-1 rounded border border-gray-800 ml-2';
+                            keyDisplay.className = 'text-gray-200 font-mono text-xs bg-black px-2 py-1 rounded border border-gray-800 ml-2';
                         }, 2000);
                     }).catch(err => {
                         console.error('Failed to copy KEY:', err);
@@ -467,7 +467,7 @@ codeBlocks.forEach((codeBlock) => {
         
         // Create an input area with the raw markdown
         const editInput = document.createElement('textarea');
-        editInput.className = 'w-full p-2 bg-black border border-gray-800 rounded-lg focus:ring-2 focus:ring-gray-100 focus:outline-none transition-shadow text-gray-400';
+        editInput.className = 'w-full p-2 bg-black border border-gray-800 rounded-lg focus:ring-2 focus:ring-gray-100 focus:outline-none transition-shadow text-gray-200';
         editInput.value = originalMessage.content;
         editInput.rows = 8;
 
