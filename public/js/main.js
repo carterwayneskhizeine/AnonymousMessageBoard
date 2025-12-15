@@ -54,6 +54,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let messages = [];
     let currentUser = null;
     let selectedImage = null; // { file: File, previewUrl: string, uploadedData: object }
+    let currentPage = 1;
+    let totalPages = 1;
+    let currentPrivateKey = '';
     const converter = new showdown.Converter({
         ghCompatibleHeaderId: true,
         strikethrough: true,
@@ -373,22 +376,26 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- API & Rendering Logic ---
-    const fetchAndRenderMessages = async () => {
+    const fetchAndRenderMessages = async (page = 1) => {
         try {
+            // 更新当前页码
+            currentPage = page;
+
             // 获取当前输入的 private key
-            const currentPrivateKey = privateKeyInput.value.trim();
+            currentPrivateKey = privateKeyInput.value.trim();
 
             // 构建 URL
-            let url = '/api/messages';
+            let url = `/api/messages?page=${page}&limit=5`;
             if (currentPrivateKey) {
-                url += `?privateKey=${encodeURIComponent(currentPrivateKey)}`;
+                url += `&privateKey=${encodeURIComponent(currentPrivateKey)}`;
             }
 
             const response = await fetch(url);
             if (!response.ok) throw new Error('Failed to fetch messages.');
 
             const data = await response.json();
-            messages = data.messages || data; // 支持两种响应格式
+            messages = data.messages || [];
+            totalPages = data.pagination?.totalPages || 1;
 
             // 更新用户状态（如果API返回了userId）
             if (data.userId && !currentUser) {
@@ -401,6 +408,9 @@ document.addEventListener('DOMContentLoaded', () => {
             messages.forEach(message => {
                 messageList.appendChild(renderMessage(message));
             });
+
+            // 渲染分页控件
+            renderPagination();
 
             // 错误提示处理
             if (currentPrivateKey) {
@@ -418,10 +428,150 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 errorMessage.classList.add('hidden');
             }
+
+            // 更新URL状态
+            updateURL();
         } catch (error) {
             console.error('Error:', error);
             messageList.innerHTML = '<p class="text-red-500 text-center">Could not load messages.</p>';
             errorMessage.classList.add('hidden');
+        }
+    };
+
+    // --- Pagination Functions ---
+    const renderPagination = () => {
+        // 移除现有的分页控件
+        const existingPagination = document.getElementById('pagination-controls');
+        if (existingPagination) {
+            existingPagination.remove();
+        }
+
+        // 如果只有一页，不显示分页
+        if (totalPages <= 1) return;
+
+        // 创建分页容器
+        const paginationContainer = document.createElement('div');
+        paginationContainer.id = 'pagination-controls';
+        paginationContainer.className = 'flex justify-center items-center gap-2 mt-8';
+
+        // 计算要显示的页码
+        const pagesToShow = calculatePagesToShow(currentPage, totalPages);
+
+        // 添加上一页按钮
+        if (currentPage > 1) {
+            const prevButton = createPaginationButton('←', 'prev', 'Previous page');
+            prevButton.addEventListener('click', () => fetchAndRenderMessages(currentPage - 1));
+            paginationContainer.appendChild(prevButton);
+        }
+
+        // 添加页码按钮
+        pagesToShow.forEach((pageNum, index) => {
+            if (pageNum === '...') {
+                const ellipsis = document.createElement('span');
+                ellipsis.className = 'px-3 py-2 text-gray-500';
+                ellipsis.textContent = '...';
+                paginationContainer.appendChild(ellipsis);
+            } else {
+                const pageButton = createPaginationButton(pageNum.toString(), `page-${pageNum}`, `Go to page ${pageNum}`);
+                if (pageNum === currentPage) {
+                    pageButton.classList.add('bg-gray-800', 'border-gray-100', 'text-gray-100');
+                    pageButton.classList.remove('hover:border-gray-100', 'hover:text-gray-100');
+                }
+                pageButton.addEventListener('click', () => fetchAndRenderMessages(pageNum));
+                paginationContainer.appendChild(pageButton);
+            }
+        });
+
+        // 添加下一页按钮
+        if (currentPage < totalPages) {
+            const nextButton = createPaginationButton('→', 'next', 'Next page');
+            nextButton.addEventListener('click', () => fetchAndRenderMessages(currentPage + 1));
+            paginationContainer.appendChild(nextButton);
+        }
+
+        // 添加到分页容器
+        const paginationContainerElement = document.getElementById('pagination-container');
+        if (paginationContainerElement) {
+            paginationContainerElement.innerHTML = '';
+            paginationContainerElement.appendChild(paginationContainer);
+        }
+    };
+
+    const createPaginationButton = (text, id, title) => {
+        const button = document.createElement('button');
+        button.id = id;
+        button.className = 'border border-gray-700 hover:border-gray-100 text-gray-400 hover:text-gray-100 font-bold py-2 px-3 rounded-lg transition-colors';
+        button.textContent = text;
+        button.title = title;
+        return button;
+    };
+
+    const calculatePagesToShow = (currentPage, totalPages) => {
+        const pages = [];
+
+        if (totalPages <= 7) {
+            // 显示所有页码
+            for (let i = 1; i <= totalPages; i++) {
+                pages.push(i);
+            }
+        } else {
+            // Google搜索结果式分页逻辑
+            if (currentPage <= 4) {
+                // 显示前5页，然后是省略号，最后是最后一页
+                for (let i = 1; i <= 5; i++) {
+                    pages.push(i);
+                }
+                pages.push('...');
+                pages.push(totalPages);
+            } else if (currentPage >= totalPages - 3) {
+                // 显示第一页，省略号，最后5页
+                pages.push(1);
+                pages.push('...');
+                for (let i = totalPages - 4; i <= totalPages; i++) {
+                    pages.push(i);
+                }
+            } else {
+                // 显示第一页，省略号，当前页前后各2页，省略号，最后一页
+                pages.push(1);
+                pages.push('...');
+                for (let i = currentPage - 2; i <= currentPage + 2; i++) {
+                    pages.push(i);
+                }
+                pages.push('...');
+                pages.push(totalPages);
+            }
+        }
+
+        return pages;
+    };
+
+    // --- URL State Management ---
+    const updateURL = () => {
+        const params = new URLSearchParams();
+        if (currentPage > 1) {
+            params.set('page', currentPage);
+        }
+        if (currentPrivateKey) {
+            params.set('key', currentPrivateKey);
+        }
+
+        const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
+        window.history.replaceState({}, '', newUrl);
+    };
+
+    const parseURLParams = () => {
+        const params = new URLSearchParams(window.location.search);
+        const page = params.get('page');
+        const key = params.get('key');
+
+        if (page) {
+            currentPage = parseInt(page);
+        }
+        if (key) {
+            currentPrivateKey = key;
+            privateKeyInput.value = key;
+            privateKeyInput.classList.remove('hidden');
+            sendKeyButton.classList.remove('hidden');
         }
     };
 
@@ -975,6 +1125,9 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('User is logged in:', user.username);
         }
     });
+
+    // Parse URL parameters for pagination and private key
+    parseURLParams();
 
     fetchAndRenderMessages();
 

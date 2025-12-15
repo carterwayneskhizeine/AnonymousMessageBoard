@@ -408,40 +408,68 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
 
 // API: Get all messages
 app.get('/api/messages', (req, res) => {
-  const { privateKey } = req.query;
+  const { privateKey, page = 1, limit = 5 } = req.query;
+  const pageNum = parseInt(page);
+  const limitNum = parseInt(limit);
+  const offset = (pageNum - 1) * limitNum;
 
-  let sql = "SELECT * FROM messages WHERE is_private = 0";
+  // 构建基础查询条件
+  let baseSql = "FROM messages WHERE is_private = 0";
   let params = [];
 
   // 如果用户已登录，显示用户的私有消息
   if (req.userId) {
-    sql = "SELECT * FROM messages WHERE is_private = 0 OR (is_private = 1 AND user_id = ?)";
+    baseSql = "FROM messages WHERE is_private = 0 OR (is_private = 1 AND user_id = ?)";
     params = [req.userId];
   }
 
   // 如果提供了 privateKey，则返回 public 消息 + 匹配 KEY 的 private 消息（覆盖用户登录逻辑）
   if (privateKey && privateKey.trim() !== '') {
-    sql = "SELECT * FROM messages WHERE is_private = 0 OR (is_private = 1 AND private_key = ?)";
+    baseSql = "FROM messages WHERE is_private = 0 OR (is_private = 1 AND private_key = ?)";
     params = [privateKey.trim()];
   }
 
-  sql += " ORDER BY is_private DESC, timestamp DESC";
+  // 查询总数
+  const countSql = `SELECT COUNT(*) as total ${baseSql}`;
 
-  db.all(sql, params, (err, rows) => {
+  // 查询分页数据
+  const dataSql = `SELECT * ${baseSql} ORDER BY is_private DESC, timestamp DESC LIMIT ? OFFSET ?`;
+
+  // 执行总数查询
+  db.get(countSql, params, (err, countResult) => {
     if (err) {
       res.status(500).json({ error: err.message });
       return;
     }
 
-    // 检查是否有匹配的 private 消息
-    const hasPrivateMessages = rows.some(row => row.is_private === 1);
+    const total = countResult.total;
+    const totalPages = Math.ceil(total / limitNum);
 
-    // 返回消息列表和是否有 private 消息的标志
-    res.json({
-      messages: rows,
-      hasPrivateMessages: hasPrivateMessages,
-      privateKeyProvided: !!privateKey,
-      userId: req.userId || null
+    // 执行分页查询
+    db.all(dataSql, [...params, limitNum, offset], (err, rows) => {
+      if (err) {
+        res.status(500).json({ error: err.message });
+        return;
+      }
+
+      // 检查是否有匹配的 private 消息
+      const hasPrivateMessages = rows.some(row => row.is_private === 1);
+
+      // 返回分页结果
+      res.json({
+        messages: rows,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total,
+          totalPages,
+          hasNextPage: pageNum < totalPages,
+          hasPrevPage: pageNum > 1
+        },
+        hasPrivateMessages: hasPrivateMessages,
+        privateKeyProvided: !!privateKey,
+        userId: req.userId || null
+      });
     });
   });
 });

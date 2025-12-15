@@ -16,6 +16,7 @@ A simple, anonymous message board web application built with Node.js, Express, E
 *   **User Authentication**: Register and login system with session-based authentication.
 *   **User-Specific Private Messages**: Logged-in users can view all their private messages without entering KEYs individually.
 *   **Image Upload Support**: Upload and display images in messages (one image per message, max 10MB, supports JPEG, PNG, GIF, WebP).
+*   **Pagination with Google-Style Navigation**: Messages are displayed with Google search results-style pagination (e.g., < 1 2 3 4 5 ... 100 >). Each page shows 5 messages with previous/next buttons and direct page navigation.
 *   **Responsive Design**: The application is designed to be accessible and usable across various devices, with mobile-friendly buttons.
 *   **Dockerized Deployment**: Easy setup and deployment using Docker and Docker Compose.
 
@@ -189,16 +190,28 @@ curl -s -X POST "http://localhost:1989/api/messages" \
 curl -s "http://localhost:1989/api/messages?privateKey=your-secret-key"
 ```
 
+**5. Get messages with pagination**
+```bash
+# Get page 1 (default, 5 messages per page)
+curl -s "http://localhost:1989/api/messages?page=1&limit=5"
+
+# Get page 2 with private key
+curl -s "http://localhost:1989/api/messages?page=2&limit=5&privateKey=your-secret-key"
+
+# Get page 3 as logged-in user (with session cookie)
+curl -s "http://localhost:1989/api/messages?page=3&limit=5" -b cookies.txt
+```
+
 #### User Authentication API
 
-**5. Register a new user**
+**6. Register a new user**
 ```bash
 curl -s -X POST "http://localhost:1989/api/auth/register" \
   -H "Content-Type: application/json" \
   -d "{\"username\": \"testuser\", \"password\": \"password123\"}"
 ```
 
-**6. Login (creates a session cookie)**
+**7. Login (creates a session cookie)**
 ```bash
 curl -s -X POST "http://localhost:1989/api/auth/login" \
   -H "Content-Type: application/json" \
@@ -206,13 +219,13 @@ curl -s -X POST "http://localhost:1989/api/auth/login" \
   -c cookies.txt
 ```
 
-**7. Get current user info (with session cookie)**
+**8. Get current user info (with session cookie)**
 ```bash
 curl -s "http://localhost:1989/api/auth/me" \
   -b cookies.txt
 ```
 
-**8. Logout**
+**9. Logout**
 ```bash
 curl -s -X POST "http://localhost:1989/api/auth/logout" \
   -b cookies.txt
@@ -220,14 +233,14 @@ curl -s -X POST "http://localhost:1989/api/auth/logout" \
 
 #### Image Upload API
 
-**9. Upload an image**
+**10. Upload an image**
 ```bash
 curl -s -X POST "http://localhost:1989/api/upload" \
   -F "image=@/path/to/your/image.jpg" \
   -H "Content-Type: multipart/form-data"
 ```
 
-**10. Post a message with image (two-step process)**
+**11. Post a message with image (two-step process)**
 ```bash
 # Step 1: Upload the image
 curl -s -X POST "http://localhost:1989/api/upload" \
@@ -259,7 +272,7 @@ curl -s -X POST "http://localhost:1989/api/messages" \
 
 #### Advanced Examples
 
-**12. Post message as logged-in user (with session cookie)**
+**13. Post message as logged-in user (with session cookie)**
 ```bash
 curl -s -X POST "http://localhost:1989/api/messages" \
   -H "Content-Type: application/json" \
@@ -267,7 +280,7 @@ curl -s -X POST "http://localhost:1989/api/messages" \
   -b cookies.txt
 ```
 
-**13. Post private message as logged-in user (auto-generates KEY)**
+**14. Post private message as logged-in user (auto-generates KEY)**
 ```bash
 curl -s -X POST "http://localhost:1989/api/messages" \
   -H "Content-Type: application/json" \
@@ -275,7 +288,7 @@ curl -s -X POST "http://localhost:1989/api/messages" \
   -b cookies.txt
 ```
 
-**14. Get messages for logged-in user (shows user's private messages)**
+**15. Get messages for logged-in user (shows user's private messages)**
 ```bash
 curl -s "http://localhost:1989/api/messages" \
   -b cookies.txt
@@ -327,7 +340,7 @@ curl -s "http://localhost:1989/api/messages" \
 }
 ```
 
-**Messages list response:**
+**Messages list response (with pagination):**
 ```json
 {
   "messages": [
@@ -356,6 +369,14 @@ curl -s "http://localhost:1989/api/messages" \
       "image_size": 102400
     }
   ],
+  "pagination": {
+    "page": 1,
+    "limit": 5,
+    "total": 42,
+    "totalPages": 9,
+    "hasNextPage": true,
+    "hasPrevPage": false
+  },
   "hasPrivateMessages": false,
   "privateKeyProvided": false,
   "userId": null
@@ -494,6 +515,33 @@ The following modifications were made to implement user authentication:
    - Added event handlers for login, registration, and logout
    - Modified message posting logic for logged-in users
    - Added registration flow from login modal
+
+#### Pagination Feature
+The following modifications were made to implement Google-style pagination:
+
+1. **`src/index.js`**:
+   - Modified `GET /api/messages` endpoint to support pagination parameters (`page`, `limit`)
+   - Added pagination query logic with `LIMIT` and `OFFSET`
+   - Added total message count query for calculating total pages
+   - Enhanced response format to include pagination metadata:
+     - `pagination.page`: Current page number
+     - `pagination.limit`: Messages per page (default: 5)
+     - `pagination.total`: Total messages matching criteria
+     - `pagination.totalPages`: Total number of pages
+     - `pagination.hasNextPage`: Whether there's a next page
+     - `pagination.hasPrevPage`: Whether there's a previous page
+
+2. **`public/js/main.js`**:
+   - Added pagination state variables (`currentPage`, `totalPages`, `currentPrivateKey`)
+   - Modified `fetchAndRenderMessages()` function to accept page parameter
+   - Added `renderPagination()` function to generate Google-style pagination controls
+   - Added `calculatePagesToShow()` function for intelligent page number display (e.g., < 1 2 3 4 5 ... 100 >)
+   - Added URL state management functions (`updateURL()`, `parseURLParams()`)
+   - Added support for URL parameters (`?page=2&key=secret`) to maintain state
+
+3. **`views/index.ejs`**:
+   - Added pagination container (`<div id="pagination-container"></div>`) after message list
+   - Pagination controls are dynamically injected by JavaScript
 
 ## Development
 
