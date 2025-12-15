@@ -17,13 +17,14 @@ A simple, anonymous message board web application built with Node.js, Express, E
 *   **User-Specific Private Messages**: Logged-in users can view all their private messages without entering KEYs individually.
 *   **Image Upload Support**: Upload and display images in messages (one image per message, max 10MB, supports JPEG, PNG, GIF, WebP).
 *   **Pagination with Google-Style Navigation**: Messages are displayed with Google search results-style pagination (e.g., < 1 2 3 4 5 ... 100 >). Each page shows 5 messages with previous/next buttons and direct page navigation.
+*   **Database Performance Optimization**: Built-in indexes for faster queries, better scalability for research and learning.
 *   **Responsive Design**: The application is designed to be accessible and usable across various devices, with mobile-friendly buttons.
 *   **Dockerized Deployment**: Easy setup and deployment using Docker and Docker Compose.
 
 ## Tech Stack
 
 *   **Backend**: Node.js (Latest Alpine) with Express.js
-*   **Database**: SQLite3
+*   **Database**: SQLite3 with performance indexes for optimized queries
 *   **Authentication**: Express Session with SQLite session store, bcrypt for password hashing
 *   **Templating**: EJS
 *   **Styling**: Tailwind CSS (configured for `darkMode: 'class'`)
@@ -542,6 +543,30 @@ The following modifications were made to implement Google-style pagination:
 3. **`views/index.ejs`**:
    - Added pagination container (`<div id="pagination-container"></div>`) after message list
    - Pagination controls are dynamically injected by JavaScript
+
+#### Database Index Optimization Feature
+The following modifications were made to optimize database query performance with indexes:
+
+1. **`src/index.js`**:
+   - Refactored database initialization logic into sequential functions:
+     - `initializeDatabase()` - Creates messages table
+     - `addMissingColumns()` - Adds missing columns to existing tables
+     - `createUsersTable()` - Creates users table
+     - `createDatabaseIndexes()` - Creates performance indexes
+   - Added the following database indexes:
+     - `idx_messages_timestamp` - Optimizes message listing by timestamp (DESC order)
+     - `idx_messages_is_private` - Optimizes filtering public/private messages
+     - `idx_messages_user_id` - Optimizes finding user's messages
+     - `idx_messages_private_key` - Optimizes private message lookup by KEY
+     - `idx_messages_has_image` - Optimizes filtering messages with images
+     - `idx_users_username` - Optimizes user login by username
+   - Improved error handling and logging for database operations
+
+**Performance Benefits**:
+- Faster message listing and pagination
+- Faster user authentication
+- Faster private message lookup
+- Better scalability for research and learning purposes
 
 ## Development
 
