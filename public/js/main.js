@@ -331,45 +331,7 @@ document.addEventListener('DOMContentLoaded', () => {
             contentContainer.appendChild(fileContainer);
         }
 
-        // Convert markdown to HTML and apply typography styles (如果有文本内容)
-        if (message.content && message.content.trim() !== '') {
-            const contentDiv = document.createElement('div');
-            contentDiv.className = 'prose prose-invert max-w-none text-gray-200';
-            contentDiv.innerHTML = converter.makeHtml(message.content);
-
-            // Add copy buttons to code blocks
-            const codeBlocks = contentDiv.querySelectorAll('pre code');
-            codeBlocks.forEach((codeBlock) => {
-                const pre = codeBlock.parentElement;
-                if (pre.querySelector('.copy-code-btn')) return; // Avoid duplicates
-
-                pre.classList.add('relative', 'group/code');
-
-                const copyButton = document.createElement('button');
-                copyButton.className = 'copy-code-btn absolute top-2 right-2 bg-black/80 backdrop-blur-sm text-xs px-2 py-1 rounded border border-gray-700 text-gray-200 hover:border-gray-100 hover:text-gray-100 opacity-0 group-hover/code:opacity-100 transition-all duration-200 z-10';
-                copyButton.innerHTML = 'Copy';
-                copyButton.title = 'Copy code';
-                copyButton.onclick = (e) => {
-                    e.stopPropagation();
-                    navigator.clipboard.writeText(codeBlock.textContent.trim())
-                        .then(() => {
-                            const original = copyButton.innerHTML;
-                            copyButton.innerHTML = 'Copied!';
-                            copyButton.classList.add('text-green-400', 'border-green-400');
-                            setTimeout(() => {
-                                copyButton.innerHTML = original;
-                                copyButton.classList.remove('text-green-400', 'border-green-400');
-                            }, 2000);
-                        })
-                        .catch(err => console.error('Copy failed:', err));
-                };
-                pre.appendChild(copyButton);
-            });
-
-            contentContainer.appendChild(contentDiv);
-        } // <--- 修复处：之前缺少了这个闭合括号
-
-        // 为 private 消息添加 KEY 显示
+        // 为 private 消息添加 KEY 显示 (放在内容之前)
         if (message.is_private === 1) {
             const privateLabel = document.createElement('div');
             privateLabel.className = 'text-xs text-gray-500 font-bold mb-1 flex items-center gap-1';
@@ -415,6 +377,44 @@ document.addEventListener('DOMContentLoaded', () => {
             privateLabel.appendChild(keyDisplay);
 
             contentContainer.appendChild(privateLabel);
+        }
+
+        // Convert markdown to HTML and apply typography styles (如果有文本内容)
+        if (message.content && message.content.trim() !== '') {
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'prose prose-invert max-w-none text-gray-200';
+            contentDiv.innerHTML = converter.makeHtml(message.content);
+
+            // Add copy buttons to code blocks
+            const codeBlocks = contentDiv.querySelectorAll('pre code');
+            codeBlocks.forEach((codeBlock) => {
+                const pre = codeBlock.parentElement;
+                if (pre.querySelector('.copy-code-btn')) return; // Avoid duplicates
+
+                pre.classList.add('relative', 'group/code');
+
+                const copyButton = document.createElement('button');
+                copyButton.className = 'copy-code-btn absolute top-2 right-2 bg-black/80 backdrop-blur-sm text-xs px-2 py-1 rounded border border-gray-700 text-gray-200 hover:border-gray-100 hover:text-gray-100 opacity-0 group-hover/code:opacity-100 transition-all duration-200 z-10';
+                copyButton.innerHTML = 'Copy';
+                copyButton.title = 'Copy code';
+                copyButton.onclick = (e) => {
+                    e.stopPropagation();
+                    navigator.clipboard.writeText(codeBlock.textContent.trim())
+                        .then(() => {
+                            const original = copyButton.innerHTML;
+                            copyButton.innerHTML = 'Copied!';
+                            copyButton.classList.add('text-green-400', 'border-green-400');
+                            setTimeout(() => {
+                                copyButton.innerHTML = original;
+                                copyButton.classList.remove('text-green-400', 'border-green-400');
+                            }, 2000);
+                        })
+                        .catch(err => console.error('Copy failed:', err));
+                };
+                pre.appendChild(copyButton);
+            });
+
+            contentContainer.appendChild(contentDiv);
         }
 
         const footer = document.createElement('div');
