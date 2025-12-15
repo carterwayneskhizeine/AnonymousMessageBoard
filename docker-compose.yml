@@ -3,7 +3,7 @@ services:
     build: .
     container_name: message-board-app
     ports:
-      - "1989:1989"
+      - "0.0.0.0:1989:1989"
     volumes:
       # Mount the local data directory to the container's data directory for persistence
       - ./data:/app/data

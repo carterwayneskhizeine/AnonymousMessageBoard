@@ -578,6 +578,8 @@ docker compose up --build -d
 
 This ensures that any new dependencies are installed, CSS is recompiled, and your latest code is included in the running container.
 
+**Note:** This command is typically used after making code changes that affect the application's dependencies or build process.
+
 ### Clearing the Database
 
 If you need to clear all messages and start fresh, you can delete the database files. The application uses two SQLite database files stored in the `./data/` directory:
