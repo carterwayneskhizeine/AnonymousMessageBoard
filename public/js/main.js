@@ -19,14 +19,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const cancelPrivate = document.getElementById('cancel-private');
     const errorMessage = document.getElementById('error-message');
 
-    // 图片上传相关 DOM 元素
-    const imageUpload = document.getElementById('image-upload');
-    const uploadImageButton = document.getElementById('upload-image-button');
-    const imageStatus = document.getElementById('image-status');
-    const imagePreviewContainer = document.getElementById('image-preview-container');
-    const imagePreview = document.getElementById('image-preview');
-    const removeImageButton = document.getElementById('remove-image-button');
-    const imageInfo = document.getElementById('image-info');
+    // 文件上传相关 DOM 元素
+    const fileUpload = document.getElementById('file-upload');
+    const uploadFileButton = document.getElementById('upload-file-button');
+    const fileStatus = document.getElementById('file-status');
+    const filePreviewContainer = document.getElementById('file-preview-container');
+    const filePreviewContent = document.getElementById('file-preview-content');
+    const filePreviewName = document.getElementById('file-preview-name');
+    const filePreviewType = document.getElementById('file-preview-type');
+    const filePreviewSize = document.getElementById('file-preview-size');
+    const removeFileButton = document.getElementById('remove-file-button');
 
     // 认证相关 DOM 元素
     const loginBtn = document.getElementById('login-btn');
@@ -53,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Global State and Instances ---
     let messages = [];
     let currentUser = null;
-    let selectedImage = null; // { file: File, previewUrl: string, uploadedData: object }
+    let selectedFile = null; // { file: File, previewUrl: string, uploadedData: object, isImage: boolean }
     let currentPage = 1;
     let totalPages = 1;
     let currentPrivateKey = '';
@@ -134,63 +136,82 @@ document.addEventListener('DOMContentLoaded', () => {
         return null;
     };
 
-    // --- Image Upload Helper Functions ---
-    const uploadImage = async (file) => {
+    // --- File Upload Helper Functions ---
+    const uploadFile = async (file) => {
         try {
             const formData = new FormData();
-            formData.append('image', file);
+            formData.append('file', file);
 
-            const response = await fetch('/api/upload', {
+            const response = await fetch('/api/upload-file', {
                 method: 'POST',
                 body: formData
             });
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to upload image');
+                throw new Error(errorData.error || 'Failed to upload file');
             }
 
             return await response.json();
         } catch (error) {
-            console.error('Image upload error:', error);
+            console.error('File upload error:', error);
             throw error;
         }
     };
 
-    const clearSelectedImage = () => {
-        if (selectedImage && selectedImage.previewUrl) {
-            URL.revokeObjectURL(selectedImage.previewUrl);
+    const clearSelectedFile = () => {
+        if (selectedFile && selectedFile.previewUrl) {
+            URL.revokeObjectURL(selectedFile.previewUrl);
         }
-        selectedImage = null;
-        imagePreviewContainer.classList.add('hidden');
-        imageStatus.textContent = 'No image selected';
-        imageStatus.classList.remove('text-green-400');
-        imageStatus.classList.add('text-gray-500');
-        imageUpload.value = '';
+        selectedFile = null;
+        filePreviewContainer.classList.add('hidden');
+        fileStatus.textContent = 'No file selected';
+        fileStatus.classList.remove('text-green-400');
+        fileStatus.classList.add('text-gray-500');
+        fileUpload.value = '';
     };
 
-    const updateImagePreview = (file) => {
-        // Clear previous image
-        clearSelectedImage();
+    const updateFilePreview = (file) => {
+        // Clear previous file
+        clearSelectedFile();
 
-        // Create preview URL
-        const previewUrl = URL.createObjectURL(file);
+        // Determine if file is an image
+        const isImage = file.type.startsWith('image/');
 
         // Update state
-        selectedImage = {
+        selectedFile = {
             file: file,
-            previewUrl: previewUrl,
-            uploadedData: null
+            previewUrl: isImage ? URL.createObjectURL(file) : null,
+            uploadedData: null,
+            isImage: isImage
         };
 
         // Update UI
-        imagePreview.src = previewUrl;
-        imagePreview.alt = file.name;
-        imageInfo.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
-        imagePreviewContainer.classList.remove('hidden');
-        imageStatus.textContent = 'Image selected';
-        imageStatus.classList.remove('text-gray-500');
-        imageStatus.classList.add('text-green-400');
+        if (isImage) {
+            // Show preview image
+            filePreviewContent.innerHTML = `
+                <img src="${selectedFile.previewUrl}" alt="File preview" class="max-h-40 rounded-lg border border-gray-800">
+                <div class="text-xs text-gray-500 mt-2">${file.name}</div>
+                <div class="text-xs text-gray-500">${(file.size / 1024).toFixed(1)} KB • ${file.type}</div>
+            `;
+        } else {
+            // Show file icon and info for non-image files
+            filePreviewContent.innerHTML = `
+                <div class="text-center mb-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                </div>
+                <div class="text-center text-sm text-gray-300 break-all">${file.name}</div>
+                <div class="text-center text-xs text-gray-500 mt-1">${file.type || 'Unknown type'}</div>
+                <div class="text-center text-xs text-gray-500 mt-1">${(file.size / 1024).toFixed(1)} KB</div>
+            `;
+        }
+
+        filePreviewContainer.classList.remove('hidden');
+        fileStatus.textContent = 'File selected';
+        fileStatus.classList.remove('text-gray-500');
+        fileStatus.classList.add('text-green-400');
     };
 
     // --- Main Rendering Function ---
@@ -203,59 +224,111 @@ document.addEventListener('DOMContentLoaded', () => {
         const contentContainer = document.createElement('div');
         contentContainer.className = 'mb-2';
 
-        // 显示图片（如果有）
+        // 显示文件（如果有）
         if (message.has_image === 1 && message.image_filename) {
-            const imageContainer = document.createElement('div');
-            imageContainer.className = 'mb-3';
+            const fileContainer = document.createElement('div');
+            fileContainer.className = 'mb-3';
 
-            const img = document.createElement('img');
-            img.src = `/uploads/${message.image_filename}`;
-            img.alt = 'Uploaded image';
-            img.className = 'max-w-full max-h-96 rounded-lg border border-gray-800 cursor-pointer hover:opacity-90 transition-opacity';
+            // 检查文件类型以决定如何显示
+            const isImage = message.image_mime_type && message.image_mime_type.startsWith('image/');
 
-            // 添加点击放大功能
-            img.addEventListener('click', () => {
-                const modal = document.createElement('div');
-                modal.className = 'fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-4';
-                modal.innerHTML = `
-                    <div class="relative max-w-4xl max-h-[90vh]">
-                        <img src="${img.src}" alt="Full size image" class="max-w-full max-h-[90vh] rounded-lg">
-                        <button class="absolute top-4 right-4 bg-black/80 backdrop-blur-sm text-white p-2 rounded-full hover:bg-black/60 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
+            if (isImage) {
+                // 显示图片预览
+                const img = document.createElement('img');
+                img.src = `/uploads/${message.image_filename}`;
+                img.alt = 'Uploaded image';
+                img.className = 'max-w-full max-h-96 rounded-lg border border-gray-800 cursor-pointer hover:opacity-90 transition-opacity';
+
+                // 添加点击放大功能
+                img.addEventListener('click', () => {
+                    const modal = document.createElement('div');
+                    modal.className = 'fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-4';
+                    modal.innerHTML = `
+                        <div class="relative max-w-4xl max-h-[90vh]">
+                            <img src="${img.src}" alt="Full size image" class="max-w-full max-h-[90vh] rounded-lg">
+                            <button class="absolute top-4 right-4 bg-black/80 backdrop-blur-sm text-white p-2 rounded-full hover:bg-black/60 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    `;
+
+                    modal.querySelector('button').addEventListener('click', () => {
+                        document.body.removeChild(modal);
+                    });
+
+                    modal.addEventListener('click', (e) => {
+                        if (e.target === modal) {
+                            document.body.removeChild(modal);
+                        }
+                    });
+
+                    document.body.appendChild(modal);
+                });
+
+                // 添加图片信息
+                const imageInfo = document.createElement('div');
+                imageInfo.className = 'text-xs text-gray-500 mt-1';
+                let infoText = 'Image';
+                if (message.image_size) {
+                    infoText += ` • ${(message.image_size / 1024).toFixed(1)} KB`;
+                }
+                if (message.image_mime_type) {
+                    infoText += ` • ${message.image_mime_type.split('/')[1].toUpperCase()}`;
+                }
+                imageInfo.textContent = infoText;
+
+                fileContainer.appendChild(img);
+                fileContainer.appendChild(imageInfo);
+            } else {
+                // 显示文件下载链接
+                const fileCard = document.createElement('div');
+                fileCard.className = 'p-3 bg-gray-900 rounded-lg border border-gray-800 flex items-center';
+
+                // 文件图标
+                const fileIcon = document.createElement('div');
+                fileIcon.className = 'mr-3';
+                fileIcon.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
                 `;
 
-                modal.querySelector('button').addEventListener('click', () => {
-                    document.body.removeChild(modal);
-                });
+                // 文件信息和下载链接
+                const fileInfo = document.createElement('div');
+                fileInfo.className = 'flex-1 min-w-0';
 
-                modal.addEventListener('click', (e) => {
-                    if (e.target === modal) {
-                        document.body.removeChild(modal);
-                    }
-                });
+                const fileName = document.createElement('div');
+                fileName.className = 'text-sm font-medium text-gray-200 truncate';
+                fileName.textContent = message.image_filename;
 
-                document.body.appendChild(modal);
-            });
+                const fileInfoText = document.createElement('div');
+                fileInfoText.className = 'text-xs text-gray-500';
+                let fileInfoStr = message.image_mime_type || 'File';
+                if (message.image_size) {
+                    fileInfoStr += ` • ${(message.image_size / 1024).toFixed(1)} KB`;
+                }
+                fileInfoText.textContent = fileInfoStr;
 
-            // 添加图片信息
-            const imageInfo = document.createElement('div');
-            imageInfo.className = 'text-xs text-gray-500 mt-1';
-            let infoText = 'Image';
-            if (message.image_size) {
-                infoText += ` • ${(message.image_size / 1024).toFixed(1)} KB`;
+                // 下载链接
+                const downloadLink = document.createElement('a');
+                downloadLink.href = `/uploads/${message.image_filename}`;
+                downloadLink.download = message.image_filename;
+                downloadLink.className = 'inline-block mt-1 text-sm text-blue-400 hover:text-blue-300';
+                downloadLink.innerHTML = 'Download File <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>';
+
+                fileInfo.appendChild(fileName);
+                fileInfo.appendChild(fileInfoText);
+                fileInfo.appendChild(downloadLink);
+
+                fileCard.appendChild(fileIcon);
+                fileCard.appendChild(fileInfo);
+
+                fileContainer.appendChild(fileCard);
             }
-            if (message.image_mime_type) {
-                infoText += ` • ${message.image_mime_type.split('/')[1].toUpperCase()}`;
-            }
-            imageInfo.textContent = infoText;
 
-            imageContainer.appendChild(img);
-            imageContainer.appendChild(imageInfo);
-            contentContainer.appendChild(imageContainer);
+            contentContainer.appendChild(fileContainer);
         }
 
         // Convert markdown to HTML and apply typography styles (如果有文本内容)
@@ -580,28 +653,28 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const content = messageInput.value.trim();
 
-        // 验证：消息必须有内容或图片
-        if (!content && !selectedImage) {
-            alert('Message must have either text content or an image');
+        // 验证：消息必须有内容或文件
+        if (!content && !selectedFile) {
+            alert('Message must have either text content or a file');
             return;
         }
 
         try {
-            // 如果有图片，先上传图片
-            let imageData = null;
-            if (selectedImage && selectedImage.file) {
-                imageStatus.textContent = 'Uploading image...';
-                imageData = await uploadImage(selectedImage.file);
-                selectedImage.uploadedData = imageData;
-                imageStatus.textContent = 'Image uploaded';
+            // 如果有文件，先上传文件
+            let fileData = null;
+            if (selectedFile && selectedFile.file) {
+                fileStatus.textContent = 'Uploading file...';
+                fileData = await uploadFile(selectedFile.file);
+                selectedFile.uploadedData = fileData;
+                fileStatus.textContent = 'File uploaded';
             }
 
-            // 存储消息内容和图片数据，稍后发送
+            // 存储消息内容和文件数据，稍后发送
             messageTypeModal.dataset.pendingContent = content;
-            if (imageData) {
-                messageTypeModal.dataset.imageData = JSON.stringify(imageData);
+            if (fileData) {
+                messageTypeModal.dataset.fileData = JSON.stringify(fileData);
             } else {
-                delete messageTypeModal.dataset.imageData;
+                delete messageTypeModal.dataset.fileData;
             }
 
             // 重置模态框状态
@@ -614,9 +687,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Error in message submission:', error);
             alert(`Error: ${error.message}`);
-            // 恢复图片状态
-            if (selectedImage) {
-                imageStatus.textContent = 'Image selected';
+            // 恢复文件状态
+            if (selectedFile) {
+                fileStatus.textContent = 'File selected';
             }
         }
     };
@@ -624,13 +697,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // 发送消息到 API
     const postMessageToAPI = async (content, isPrivate, privateKey) => {
         try {
-            // 获取图片数据
-            let imageData = null;
-            if (messageTypeModal.dataset.imageData) {
+            // 获取文件数据
+            let fileData = null;
+            if (messageTypeModal.dataset.fileData) {
                 try {
-                    imageData = JSON.parse(messageTypeModal.dataset.imageData);
+                    fileData = JSON.parse(messageTypeModal.dataset.fileData);
                 } catch (e) {
-                    console.error('Failed to parse image data:', e);
+                    console.error('Failed to parse file data:', e);
                 }
             }
 
@@ -641,12 +714,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 privateKey
             };
 
-            // 添加图片信息
-            if (imageData) {
-                requestBody.hasImage = true;
-                requestBody.imageFilename = imageData.filename;
-                requestBody.imageMimeType = imageData.mimeType;
-                requestBody.imageSize = imageData.size;
+            // 添加文件信息
+            if (fileData) {
+                requestBody.hasImage = true; // 保持现有字段名以向后兼容
+                requestBody.imageFilename = fileData.filename;
+                requestBody.imageMimeType = fileData.mimeType;
+                requestBody.imageSize = fileData.size;
             }
 
             const response = await fetch('/api/messages', {
@@ -678,7 +751,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 未登录用户发送的私有消息不显示
 
                 messageInput.value = '';
-                clearSelectedImage(); // 清除图片状态
+                clearSelectedFile(); // 清除文件状态
             } else {
                 const errorData = await response.json();
                 alert(`Error: ${errorData.error || 'Something went wrong'}`);
@@ -808,9 +881,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const originalMessage = messages.find(m => m.id == id);
         if (!originalMessage) return;
 
-        // 如果消息有图片，不允许编辑（因为一个消息只能有一张图片，编辑时不能删除图片）
+        // 如果消息有文件（has_image为1），不允许编辑（因为一个消息只能有一个文件，编辑时不能删除文件）
         if (originalMessage.has_image === 1) {
-            alert('Cannot edit messages with images. You can only edit the text content of image messages by deleting and reposting.');
+            alert('Cannot edit messages with files. You can only edit the text content of file messages by deleting and reposting.');
             return;
         }
 
@@ -850,34 +923,26 @@ document.addEventListener('DOMContentLoaded', () => {
     messageForm.addEventListener('submit', handlePostSubmit);
     messageList.addEventListener('click', handleMessageClick);
 
-    // 图片上传事件监听器
-    uploadImageButton.addEventListener('click', () => {
-        imageUpload.click();
+    // 文件上传事件监听器
+    uploadFileButton.addEventListener('click', () => {
+        fileUpload.click();
     });
 
-    imageUpload.addEventListener('change', (e) => {
+    fileUpload.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        // 检查文件类型
-        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-        if (!allowedTypes.includes(file.type)) {
-            alert('Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.');
-            imageUpload.value = '';
+        // 检查文件大小 (50MB)
+        if (file.size > 50 * 1024 * 1024) {
+            alert('File is too large. Maximum size is 50MB.');
+            fileUpload.value = '';
             return;
         }
 
-        // 检查文件大小 (10MB)
-        if (file.size > 10 * 1024 * 1024) {
-            alert('Image file is too large. Maximum size is 10MB.');
-            imageUpload.value = '';
-            return;
-        }
-
-        updateImagePreview(file);
+        updateFilePreview(file);
     });
 
-    removeImageButton.addEventListener('click', clearSelectedImage);
+    removeFileButton.addEventListener('click', clearSelectedFile);
 
     // KEY 按钮事件监听器
     keyButton.addEventListener('click', (e) => {
@@ -885,21 +950,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const isShowingKeyInput = !privateKeyInput.classList.contains('hidden');
 
         if (isShowingKeyInput) {
-            // 隐藏 KEY 输入框和 Send 按钮，显示 Post Message 按钮和图片上传按钮
+            // 隐藏 KEY 输入框和 Send 按钮，显示 Post Message 按钮和文件上传按钮
             privateKeyInput.classList.add('hidden');
             sendKeyButton.classList.add('hidden');
             postMessageButton.classList.remove('hidden');
-            uploadImageButton.classList.remove('hidden');
+            uploadFileButton.classList.remove('hidden');
             privateKeyInput.value = '';
             // 隐藏错误提示
             errorMessage.classList.add('hidden');
             fetchAndRenderMessages(); // 重新加载（只显示 public）
         } else {
-            // 显示 KEY 输入框和 Send 按钮，隐藏 Post Message 按钮和图片上传按钮
+            // 显示 KEY 输入框和 Send 按钮，隐藏 Post Message 按钮和文件上传按钮
             privateKeyInput.classList.remove('hidden');
             sendKeyButton.classList.remove('hidden');
             postMessageButton.classList.add('hidden');
-            uploadImageButton.classList.add('hidden');
+            uploadFileButton.classList.add('hidden');
             privateKeyInput.focus();
         }
     });

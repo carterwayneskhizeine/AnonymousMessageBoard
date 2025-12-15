@@ -43,15 +43,10 @@ const storage = multer.diskStorage({
   }
 });
 
-// File filter for image files only
+// File filter for any type of files (with size and extension checks elsewhere if needed)
 const fileFilter = (req, file, cb) => {
-  const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-
-  if (allowedMimes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error('Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.'), false);
-  }
+  // Accept all files for now - we'll handle validation in the actual upload endpoint
+  cb(null, true);
 };
 
 // Multer upload instance
@@ -59,7 +54,16 @@ const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit
+    fileSize: 50 * 1024 * 1024, // 50MB limit
+    files: 1 // Only one file per request
+  }
+});
+
+// Additional multer instance for files without filtering for the new general upload endpoint
+const generalUpload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB limit
     files: 1 // Only one file per request
   }
 });
@@ -397,19 +401,11 @@ app.get('/api/auth/me', (req, res) => {
 
 // ==================== Image Upload API ====================
 
-// API: Upload image
+// API: Upload image/file (keeping this endpoint for backward compatibility, but now supports all file types)
 app.post('/api/upload', upload.single('image'), (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ error: 'No image file provided' });
-    }
-
-    // Check if file is actually an image by MIME type
-    const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    if (!allowedMimes.includes(req.file.mimetype)) {
-      // Delete the uploaded file if it's not an image
-      fs.unlinkSync(path.join(uploadsDir, req.file.filename));
-      return res.status(400).json({ error: 'Invalid file type. Only images are allowed.' });
+      return res.status(400).json({ error: 'No file provided' });
     }
 
     // Return success response with file info
@@ -422,7 +418,7 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
       url: `/uploads/${req.file.filename}`
     });
   } catch (error) {
-    console.error('Image upload error:', error);
+    console.error('File upload error:', error);
 
     // Clean up file if there was an error
     if (req.file && req.file.filename) {
@@ -433,7 +429,39 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
       }
     }
 
-    res.status(500).json({ error: 'Failed to upload image' });
+    res.status(500).json({ error: 'Failed to upload file' });
+  }
+});
+
+// API: Upload any type of file
+app.post('/api/upload-file', generalUpload.single('file'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file provided' });
+    }
+
+    // Return success response with file info
+    res.status(201).json({
+      success: true,
+      filename: req.file.filename,
+      originalName: req.file.originalname,
+      mimeType: req.file.mimetype,
+      size: req.file.size,
+      url: `/uploads/${req.file.filename}`
+    });
+  } catch (error) {
+    console.error('File upload error:', error);
+
+    // Clean up file if there was an error
+    if (req.file && req.file.filename) {
+      try {
+        fs.unlinkSync(path.join(uploadsDir, req.file.filename));
+      } catch (unlinkError) {
+        console.error('Failed to delete file:', unlinkError);
+      }
+    }
+
+    res.status(500).json({ error: 'Failed to upload file' });
   }
 });
 
@@ -511,21 +539,21 @@ app.get('/api/messages', (req, res) => {
 app.post('/api/messages', (req, res) => {
   const { content, isPrivate, privateKey, hasImage, imageFilename, imageMimeType, imageSize } = req.body;
 
-  // Validate: message must have either content or an image
+  // Validate: message must have either content or a file
   if ((!content || content.trim() === '') && !hasImage) {
-    return res.status(400).json({ error: 'Message must have either text content or an image' });
+    return res.status(400).json({ error: 'Message must have either text content or a file' });
   }
 
-  // Validate image parameters if hasImage is true
+  // Validate file parameters if hasImage is true (has_image field is used for all files, not just images)
   if (hasImage) {
     if (!imageFilename || !imageMimeType || !imageSize) {
-      return res.status(400).json({ error: 'Missing image information' });
+      return res.status(400).json({ error: 'Missing file information' });
     }
 
-    // Check if image file exists
+    // Check if file exists
     const imagePath = path.join(uploadsDir, imageFilename);
     if (!fs.existsSync(imagePath)) {
-      return res.status(400).json({ error: 'Image file not found' });
+      return res.status(400).json({ error: 'File not found' });
     }
   }
 
@@ -590,17 +618,17 @@ app.delete('/api/messages/:id', (req, res) => {
       return res.status(403).json({ error: 'You can only delete your own private messages' });
     }
 
-    // Delete image file if message has one
+    // Delete file if message has one
     if (message.has_image === 1 && message.image_filename) {
       const imagePath = path.join(uploadsDir, message.image_filename);
       try {
         if (fs.existsSync(imagePath)) {
           fs.unlinkSync(imagePath);
-          console.log(`Deleted image file: ${message.image_filename}`);
+          console.log(`Deleted file: ${message.image_filename}`);
         }
       } catch (unlinkError) {
-        console.error(`Failed to delete image file ${message.image_filename}:`, unlinkError);
-        // Continue with message deletion even if image deletion fails
+        console.error(`Failed to delete file ${message.image_filename}:`, unlinkError);
+        // Continue with message deletion even if file deletion fails
       }
     }
 
@@ -661,9 +689,9 @@ app.put('/api/messages/:id', (req, res) => {
   });
 });
 
-// Function to clean up orphaned image files
+// Function to clean up orphaned files
 const cleanupOrphanedImages = () => {
-  console.log('Checking for orphaned image files...');
+  console.log('Checking for orphaned files...');
 
   fs.readdir(uploadsDir, (err, files) => {
     if (err) {
@@ -671,10 +699,10 @@ const cleanupOrphanedImages = () => {
       return;
     }
 
-    // Get all image filenames from database
+    // Get all filenames from database (for all types of files)
     db.all('SELECT image_filename FROM messages WHERE has_image = 1 AND image_filename IS NOT NULL', (err, rows) => {
       if (err) {
-        console.error('Error fetching image filenames from database:', err);
+        console.error('Error fetching filenames from database:', err);
         return;
       }
 
@@ -697,9 +725,9 @@ const cleanupOrphanedImages = () => {
       });
 
       if (orphanCount > 0) {
-        console.log(`Cleaned up ${orphanCount} orphaned image files`);
+        console.log(`Cleaned up ${orphanCount} orphaned files`);
       } else {
-        console.log('No orphaned image files found');
+        console.log('No orphaned files found');
       }
     });
   });
