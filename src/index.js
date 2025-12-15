@@ -1,9 +1,11 @@
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const sqlite3 = require('sqlite3').verbose();
 const session = require('express-session');
 const SQLiteStore = require('connect-sqlite3')(session);
 const bcrypt = require('bcrypt');
+const multer = require('multer');
 
 const app = express();
 const port = 1989;
@@ -18,6 +20,50 @@ const comparePassword = async (password, hash) => {
   return await bcrypt.compare(password, hash);
 };
 
+// File upload configuration
+const uploadsDir = path.resolve(__dirname, '..', 'data', 'uploads');
+
+// Ensure uploads directory exists
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Multer storage configuration
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadsDir);
+  },
+  filename: (req, file, cb) => {
+    // Generate unique filename: timestamp_random_originalname
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2, 15);
+    const originalName = file.originalname.replace(/[^a-zA-Z0-9.]/g, '_');
+    const filename = `${timestamp}_${random}_${originalName}`;
+    cb(null, filename);
+  }
+});
+
+// File filter for image files only
+const fileFilter = (req, file, cb) => {
+  const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+
+  if (allowedMimes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.'), false);
+  }
+};
+
+// Multer upload instance
+const upload = multer({
+  storage: storage,
+  fileFilter: fileFilter,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+    files: 1 // Only one file per request
+  }
+});
+
 // The database file will be created in the /app/data directory inside the container
 const dbPath = path.resolve(__dirname, '..', 'data', 'messages.db');
 const db = new sqlite3.Database(dbPath, (err) => {
@@ -31,7 +77,11 @@ const db = new sqlite3.Database(dbPath, (err) => {
       timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
       is_private INTEGER DEFAULT 0,
       private_key TEXT DEFAULT NULL,
-      user_id INTEGER DEFAULT NULL
+      user_id INTEGER DEFAULT NULL,
+      has_image INTEGER DEFAULT 0,
+      image_filename TEXT DEFAULT NULL,
+      image_mime_type TEXT DEFAULT NULL,
+      image_size INTEGER DEFAULT NULL
     )`);
 
     // 确保现有表也有新字段（如果表已存在但缺少字段）
@@ -66,6 +116,42 @@ const db = new sqlite3.Database(dbPath, (err) => {
         console.error('Error adding user_id column:', err.message);
       } else {
         console.log('User_id column added or already exists.');
+      }
+    });
+
+    // 添加图片相关字段到 messages 表
+    db.run(`ALTER TABLE messages ADD COLUMN has_image INTEGER DEFAULT 0`, (err) => {
+      if (err && !err.message.includes('duplicate column name')) {
+        console.error('Error adding has_image column:', err.message);
+      } else {
+        console.log('has_image column added or already exists.');
+      }
+    });
+    db.run(`ALTER TABLE messages ADD COLUMN image_filename TEXT DEFAULT NULL`, (err) => {
+      if (err && !err.message.includes('duplicate column name')) {
+        console.error('Error adding image_filename column:', err.message);
+      } else {
+        console.log('image_filename column added or already exists.');
+      }
+    });
+    db.run(`ALTER TABLE messages ADD COLUMN image_mime_type TEXT DEFAULT NULL`, (err) => {
+      if (err && !err.message.includes('duplicate column name')) {
+        console.error('Error adding image_mime_type column:', err.message);
+      } else {
+        console.log('image_mime_type column added or already exists.');
+      }
+    });
+    db.run(`ALTER TABLE messages ADD COLUMN image_size INTEGER DEFAULT NULL`, (err) => {
+      if (err && !err.message.includes('duplicate column name')) {
+        console.error('Error adding image_size column:', err.message);
+      } else {
+        console.log('image_size column added or already exists.');
+
+        // 数据库迁移完成后，清理孤儿图片文件
+        cleanupOrphanedImages();
+
+        // 每小时清理一次孤儿图片文件
+        setInterval(cleanupOrphanedImages, 60 * 60 * 1000);
       }
     });
   }
@@ -114,6 +200,42 @@ const getCurrentUser = (req, res, next) => {
 
 // Apply getCurrentUser middleware to all routes
 app.use(getCurrentUser);
+
+// Middleware to check image access permissions
+app.use('/uploads/:filename', (req, res, next) => {
+  const filename = req.params.filename;
+
+  // Find message associated with this image
+  db.get(`SELECT * FROM messages WHERE image_filename = ?`, [filename], (err, message) => {
+    if (err) {
+      console.error('Database error checking image access:', err);
+      return res.status(500).send('Internal server error');
+    }
+
+    if (!message) {
+      // Image not associated with any message - allow access (could be orphaned file)
+      return next();
+    }
+
+    // Check if user can access this message
+    const canAccess =
+      // Public message
+      message.is_private === 0 ||
+      // User is logged in and owns the private message
+      (message.is_private === 1 && req.userId && message.user_id === req.userId) ||
+      // Private key provided matches
+      (message.is_private === 1 && req.query.privateKey && req.query.privateKey === message.private_key);
+
+    if (canAccess) {
+      next();
+    } else {
+      res.status(403).send('Access denied');
+    }
+  });
+});
+
+// Static file serving for uploads (after permission check)
+app.use('/uploads', express.static(uploadsDir));
 
 // Render main page
 app.get('/', (req, res) => {
@@ -240,6 +362,48 @@ app.get('/api/auth/me', (req, res) => {
   }
 });
 
+// ==================== Image Upload API ====================
+
+// API: Upload image
+app.post('/api/upload', upload.single('image'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image file provided' });
+    }
+
+    // Check if file is actually an image by MIME type
+    const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedMimes.includes(req.file.mimetype)) {
+      // Delete the uploaded file if it's not an image
+      fs.unlinkSync(path.join(uploadsDir, req.file.filename));
+      return res.status(400).json({ error: 'Invalid file type. Only images are allowed.' });
+    }
+
+    // Return success response with file info
+    res.status(201).json({
+      success: true,
+      filename: req.file.filename,
+      originalName: req.file.originalname,
+      mimeType: req.file.mimetype,
+      size: req.file.size,
+      url: `/uploads/${req.file.filename}`
+    });
+  } catch (error) {
+    console.error('Image upload error:', error);
+
+    // Clean up file if there was an error
+    if (req.file && req.file.filename) {
+      try {
+        fs.unlinkSync(path.join(uploadsDir, req.file.filename));
+      } catch (unlinkError) {
+        console.error('Failed to delete file:', unlinkError);
+      }
+    }
+
+    res.status(500).json({ error: 'Failed to upload image' });
+  }
+});
+
 // ==================== Messages API ====================
 
 // API: Get all messages
@@ -284,9 +448,24 @@ app.get('/api/messages', (req, res) => {
 
 // API: Post a new message
 app.post('/api/messages', (req, res) => {
-  const { content, isPrivate, privateKey } = req.body;
-  if (!content || content.trim() === '') {
-    return res.status(400).json({ error: 'Message content cannot be empty' });
+  const { content, isPrivate, privateKey, hasImage, imageFilename, imageMimeType, imageSize } = req.body;
+
+  // Validate: message must have either content or an image
+  if ((!content || content.trim() === '') && !hasImage) {
+    return res.status(400).json({ error: 'Message must have either text content or an image' });
+  }
+
+  // Validate image parameters if hasImage is true
+  if (hasImage) {
+    if (!imageFilename || !imageMimeType || !imageSize) {
+      return res.status(400).json({ error: 'Missing image information' });
+    }
+
+    // Check if image file exists
+    const imagePath = path.join(uploadsDir, imageFilename);
+    if (!fs.existsSync(imagePath)) {
+      return res.status(400).json({ error: 'Image file not found' });
+    }
   }
 
   // 验证 private 消息的 KEY（如果用户未登录）
@@ -313,8 +492,11 @@ app.post('/api/messages', (req, res) => {
     }
   }
 
-  db.run(`INSERT INTO messages (content, is_private, private_key, user_id) VALUES (?, ?, ?, ?)`,
-    [content, isPrivateInt, finalPrivateKey, userId], function(err) {
+  const hasImageInt = hasImage ? 1 : 0;
+  const finalContent = content ? content.trim() : '';
+
+  db.run(`INSERT INTO messages (content, is_private, private_key, user_id, has_image, image_filename, image_mime_type, image_size) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [finalContent, isPrivateInt, finalPrivateKey, userId, hasImageInt, imageFilename, imageMimeType, imageSize], function(err) {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -345,6 +527,20 @@ app.delete('/api/messages/:id', (req, res) => {
     // 检查权限：私有消息用户只能删除自己的消息，公开消息任何人可删
     if (message.is_private === 1 && message.user_id && message.user_id !== req.userId) {
       return res.status(403).json({ error: 'You can only delete your own private messages' });
+    }
+
+    // Delete image file if message has one
+    if (message.has_image === 1 && message.image_filename) {
+      const imagePath = path.join(uploadsDir, message.image_filename);
+      try {
+        if (fs.existsSync(imagePath)) {
+          fs.unlinkSync(imagePath);
+          console.log(`Deleted image file: ${message.image_filename}`);
+        }
+      } catch (unlinkError) {
+        console.error(`Failed to delete image file ${message.image_filename}:`, unlinkError);
+        // Continue with message deletion even if image deletion fails
+      }
     }
 
     db.run(`DELETE FROM messages WHERE id = ?`, id, function(err) {
@@ -403,6 +599,50 @@ app.put('/api/messages/:id', (req, res) => {
     });
   });
 });
+
+// Function to clean up orphaned image files
+const cleanupOrphanedImages = () => {
+  console.log('Checking for orphaned image files...');
+
+  fs.readdir(uploadsDir, (err, files) => {
+    if (err) {
+      console.error('Error reading uploads directory:', err);
+      return;
+    }
+
+    // Get all image filenames from database
+    db.all('SELECT image_filename FROM messages WHERE has_image = 1 AND image_filename IS NOT NULL', (err, rows) => {
+      if (err) {
+        console.error('Error fetching image filenames from database:', err);
+        return;
+      }
+
+      const dbFilenames = new Set(rows.map(row => row.image_filename));
+      let orphanCount = 0;
+
+      // Check each file
+      files.forEach(filename => {
+        if (!dbFilenames.has(filename)) {
+          const filePath = path.join(uploadsDir, filename);
+          fs.unlink(filePath, (unlinkErr) => {
+            if (unlinkErr) {
+              console.error(`Failed to delete orphaned file ${filename}:`, unlinkErr);
+            } else {
+              console.log(`Deleted orphaned file: ${filename}`);
+              orphanCount++;
+            }
+          });
+        }
+      });
+
+      if (orphanCount > 0) {
+        console.log(`Cleaned up ${orphanCount} orphaned image files`);
+      } else {
+        console.log('No orphaned image files found');
+      }
+    });
+  });
+};
 
 app.listen(port, () => {
   console.log(`Server listening at http://localhost:${port}`);

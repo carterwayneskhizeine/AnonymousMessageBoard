@@ -19,6 +19,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const cancelPrivate = document.getElementById('cancel-private');
     const errorMessage = document.getElementById('error-message');
 
+    // 图片上传相关 DOM 元素
+    const imageUpload = document.getElementById('image-upload');
+    const uploadImageButton = document.getElementById('upload-image-button');
+    const imageStatus = document.getElementById('image-status');
+    const imagePreviewContainer = document.getElementById('image-preview-container');
+    const imagePreview = document.getElementById('image-preview');
+    const removeImageButton = document.getElementById('remove-image-button');
+    const imageInfo = document.getElementById('image-info');
+
     // 认证相关 DOM 元素
     const loginBtn = document.getElementById('login-btn');
     const registerBtn = document.getElementById('register-btn');
@@ -44,6 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Global State and Instances ---
     let messages = [];
     let currentUser = null;
+    let selectedImage = null; // { file: File, previewUrl: string, uploadedData: object }
     const converter = new showdown.Converter({
         ghCompatibleHeaderId: true,
         strikethrough: true,
@@ -121,45 +131,166 @@ document.addEventListener('DOMContentLoaded', () => {
         return null;
     };
 
+    // --- Image Upload Helper Functions ---
+    const uploadImage = async (file) => {
+        try {
+            const formData = new FormData();
+            formData.append('image', file);
+
+            const response = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to upload image');
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Image upload error:', error);
+            throw error;
+        }
+    };
+
+    const clearSelectedImage = () => {
+        if (selectedImage && selectedImage.previewUrl) {
+            URL.revokeObjectURL(selectedImage.previewUrl);
+        }
+        selectedImage = null;
+        imagePreviewContainer.classList.add('hidden');
+        imageStatus.textContent = 'No image selected';
+        imageStatus.classList.remove('text-green-400');
+        imageStatus.classList.add('text-gray-500');
+        imageUpload.value = '';
+    };
+
+    const updateImagePreview = (file) => {
+        // Clear previous image
+        clearSelectedImage();
+
+        // Create preview URL
+        const previewUrl = URL.createObjectURL(file);
+
+        // Update state
+        selectedImage = {
+            file: file,
+            previewUrl: previewUrl,
+            uploadedData: null
+        };
+
+        // Update UI
+        imagePreview.src = previewUrl;
+        imagePreview.alt = file.name;
+        imageInfo.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+        imagePreviewContainer.classList.remove('hidden');
+        imageStatus.textContent = 'Image selected';
+        imageStatus.classList.remove('text-gray-500');
+        imageStatus.classList.add('text-green-400');
+    };
+
     // --- Main Rendering Function ---
     const renderMessage = (message) => {
         const messageElement = document.createElement('div');
         messageElement.className = 'bg-black border border-gray-800 p-4 rounded-lg shadow-md animate-fade-in flex flex-col group';
         messageElement.dataset.messageId = message.id;
 
-        // Convert markdown to HTML and apply typography styles
-        const contentDiv = document.createElement('div');
-        contentDiv.className = 'prose prose-invert max-w-none text-gray-200 mb-2'; // prose-invert for dark mode
-        contentDiv.innerHTML = converter.makeHtml(message.content);
+        // 创建内容容器
+        const contentContainer = document.createElement('div');
+        contentContainer.className = 'mb-2';
 
-// Add copy buttons to code blocks
-const codeBlocks = contentDiv.querySelectorAll('pre code');
-codeBlocks.forEach((codeBlock) => {
-  const pre = codeBlock.parentElement;
-  if (pre.querySelector('.copy-code-btn')) return; // Avoid duplicates
+        // 显示图片（如果有）
+        if (message.has_image === 1 && message.image_filename) {
+            const imageContainer = document.createElement('div');
+            imageContainer.className = 'mb-3';
 
-  pre.classList.add('relative', 'group/code');
+            const img = document.createElement('img');
+            img.src = `/uploads/${message.image_filename}`;
+            img.alt = 'Uploaded image';
+            img.className = 'max-w-full max-h-96 rounded-lg border border-gray-800 cursor-pointer hover:opacity-90 transition-opacity';
 
-  const copyButton = document.createElement('button');
-  copyButton.className = 'copy-code-btn absolute top-2 right-2 bg-black/80 backdrop-blur-sm text-xs px-2 py-1 rounded border border-gray-700 text-gray-200 hover:border-gray-100 hover:text-gray-100 opacity-0 group-hover/code:opacity-100 transition-all duration-200 z-10';
-  copyButton.innerHTML = 'Copy';
-  copyButton.title = 'Copy code';
-  copyButton.onclick = (e) => {
-    e.stopPropagation();
-    navigator.clipboard.writeText(codeBlock.textContent.trim())
-      .then(() => {
-        const original = copyButton.innerHTML;
-        copyButton.innerHTML = 'Copied!';
-        copyButton.classList.add('text-green-400', 'border-green-400');
-        setTimeout(() => {
-          copyButton.innerHTML = original;
-          copyButton.classList.remove('text-green-400', 'border-green-400');
-        }, 2000);
-      })
-      .catch(err => console.error('Copy failed:', err));
-  };
-  pre.appendChild(copyButton);
-});
+            // 添加点击放大功能
+            img.addEventListener('click', () => {
+                const modal = document.createElement('div');
+                modal.className = 'fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-4';
+                modal.innerHTML = `
+                    <div class="relative max-w-4xl max-h-[90vh]">
+                        <img src="${img.src}" alt="Full size image" class="max-w-full max-h-[90vh] rounded-lg">
+                        <button class="absolute top-4 right-4 bg-black/80 backdrop-blur-sm text-white p-2 rounded-full hover:bg-black/60 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                `;
+
+                modal.querySelector('button').addEventListener('click', () => {
+                    document.body.removeChild(modal);
+                });
+
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        document.body.removeChild(modal);
+                    }
+                });
+
+                document.body.appendChild(modal);
+            });
+
+            // 添加图片信息
+            const imageInfo = document.createElement('div');
+            imageInfo.className = 'text-xs text-gray-500 mt-1';
+            let infoText = 'Image';
+            if (message.image_size) {
+                infoText += ` • ${(message.image_size / 1024).toFixed(1)} KB`;
+            }
+            if (message.image_mime_type) {
+                infoText += ` • ${message.image_mime_type.split('/')[1].toUpperCase()}`;
+            }
+            imageInfo.textContent = infoText;
+
+            imageContainer.appendChild(img);
+            imageContainer.appendChild(imageInfo);
+            contentContainer.appendChild(imageContainer);
+        }
+
+        // Convert markdown to HTML and apply typography styles (如果有文本内容)
+        if (message.content && message.content.trim() !== '') {
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'prose prose-invert max-w-none text-gray-200';
+            contentDiv.innerHTML = converter.makeHtml(message.content);
+
+            // Add copy buttons to code blocks
+            const codeBlocks = contentDiv.querySelectorAll('pre code');
+            codeBlocks.forEach((codeBlock) => {
+                const pre = codeBlock.parentElement;
+                if (pre.querySelector('.copy-code-btn')) return; // Avoid duplicates
+
+                pre.classList.add('relative', 'group/code');
+
+                const copyButton = document.createElement('button');
+                copyButton.className = 'copy-code-btn absolute top-2 right-2 bg-black/80 backdrop-blur-sm text-xs px-2 py-1 rounded border border-gray-700 text-gray-200 hover:border-gray-100 hover:text-gray-100 opacity-0 group-hover/code:opacity-100 transition-all duration-200 z-10';
+                copyButton.innerHTML = 'Copy';
+                copyButton.title = 'Copy code';
+                copyButton.onclick = (e) => {
+                    e.stopPropagation();
+                    navigator.clipboard.writeText(codeBlock.textContent.trim())
+                        .then(() => {
+                            const original = copyButton.innerHTML;
+                            copyButton.innerHTML = 'Copied!';
+                            copyButton.classList.add('text-green-400', 'border-green-400');
+                            setTimeout(() => {
+                                copyButton.innerHTML = original;
+                                copyButton.classList.remove('text-green-400', 'border-green-400');
+                            }, 2000);
+                        })
+                        .catch(err => console.error('Copy failed:', err));
+                };
+                pre.appendChild(copyButton);
+            });
+
+            contentContainer.appendChild(contentDiv);
 
         // 为 private 消息添加 KEY 显示
         if (message.is_private === 1) {
@@ -206,7 +337,7 @@ codeBlocks.forEach((codeBlock) => {
             privateLabel.appendChild(privateText);
             privateLabel.appendChild(keyDisplay);
 
-            messageElement.appendChild(privateLabel);
+            contentContainer.appendChild(privateLabel);
         }
 
         const footer = document.createElement('div');
@@ -234,7 +365,7 @@ codeBlocks.forEach((codeBlock) => {
         footer.appendChild(timestamp);
         footer.appendChild(actions);
 
-        messageElement.appendChild(contentDiv);
+        messageElement.appendChild(contentContainer);
         messageElement.appendChild(footer);
 
         return messageElement;
@@ -297,27 +428,80 @@ codeBlocks.forEach((codeBlock) => {
     const handlePostSubmit = async (e) => {
         e.preventDefault();
         const content = messageInput.value.trim();
-        if (!content) return;
 
-        // 存储消息内容，稍后发送
-        messageTypeModal.dataset.pendingContent = content;
+        // 验证：消息必须有内容或图片
+        if (!content && !selectedImage) {
+            alert('Message must have either text content or an image');
+            return;
+        }
 
-        // 重置模态框状态
-        typeSelection.classList.remove('hidden');
-        privateKeyEntry.classList.add('hidden');
-        modalPrivateKey.value = '';
+        try {
+            // 如果有图片，先上传图片
+            let imageData = null;
+            if (selectedImage && selectedImage.file) {
+                imageStatus.textContent = 'Uploading image...';
+                imageData = await uploadImage(selectedImage.file);
+                selectedImage.uploadedData = imageData;
+                imageStatus.textContent = 'Image uploaded';
+            }
 
-        // 显示模态框
-        messageTypeModal.showModal();
+            // 存储消息内容和图片数据，稍后发送
+            messageTypeModal.dataset.pendingContent = content;
+            if (imageData) {
+                messageTypeModal.dataset.imageData = JSON.stringify(imageData);
+            } else {
+                delete messageTypeModal.dataset.imageData;
+            }
+
+            // 重置模态框状态
+            typeSelection.classList.remove('hidden');
+            privateKeyEntry.classList.add('hidden');
+            modalPrivateKey.value = '';
+
+            // 显示模态框
+            messageTypeModal.showModal();
+        } catch (error) {
+            console.error('Error in message submission:', error);
+            alert(`Error: ${error.message}`);
+            // 恢复图片状态
+            if (selectedImage) {
+                imageStatus.textContent = 'Image selected';
+            }
+        }
     };
 
     // 发送消息到 API
     const postMessageToAPI = async (content, isPrivate, privateKey) => {
         try {
+            // 获取图片数据
+            let imageData = null;
+            if (messageTypeModal.dataset.imageData) {
+                try {
+                    imageData = JSON.parse(messageTypeModal.dataset.imageData);
+                } catch (e) {
+                    console.error('Failed to parse image data:', e);
+                }
+            }
+
+            // 构建请求体
+            const requestBody = {
+                content,
+                isPrivate,
+                privateKey
+            };
+
+            // 添加图片信息
+            if (imageData) {
+                requestBody.hasImage = true;
+                requestBody.imageFilename = imageData.filename;
+                requestBody.imageMimeType = imageData.mimeType;
+                requestBody.imageSize = imageData.size;
+            }
+
             const response = await fetch('/api/messages', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content, isPrivate, privateKey }),
+                body: JSON.stringify(requestBody),
             });
 
             if (response.ok) {
@@ -341,6 +525,7 @@ codeBlocks.forEach((codeBlock) => {
                 // 未登录用户发送的私有消息不显示
 
                 messageInput.value = '';
+                clearSelectedImage(); // 清除图片状态
             } else {
                 const errorData = await response.json();
                 alert(`Error: ${errorData.error || 'Something went wrong'}`);
@@ -461,10 +646,23 @@ codeBlocks.forEach((codeBlock) => {
         const originalMessage = messages.find(m => m.id == id);
         if (!originalMessage) return;
 
+        // 如果消息有图片，不允许编辑（因为一个消息只能有一张图片，编辑时不能删除图片）
+        if (originalMessage.has_image === 1) {
+            alert('Cannot edit messages with images. You can only edit the text content of image messages by deleting and reposting.');
+            return;
+        }
+
         const messageElement = document.querySelector(`[data-message-id='${id}']`);
-        const contentDiv = messageElement.querySelector('.prose');
+        const contentContainer = messageElement.querySelector('.mb-2');
         const footer = messageElement.querySelector('.flex.justify-between');
-        
+
+        // 找到文本内容div（如果有）
+        const contentDiv = contentContainer.querySelector('.prose');
+        if (!contentDiv) {
+            alert('No text content to edit');
+            return;
+        }
+
         // Create an input area with the raw markdown
         const editInput = document.createElement('textarea');
         editInput.className = 'w-full p-2 bg-black border border-gray-800 rounded-lg focus:ring-2 focus:ring-gray-100 focus:outline-none transition-shadow text-gray-200';
@@ -489,6 +687,35 @@ codeBlocks.forEach((codeBlock) => {
     // --- Initial Setup ---
     messageForm.addEventListener('submit', handlePostSubmit);
     messageList.addEventListener('click', handleMessageClick);
+
+    // 图片上传事件监听器
+    uploadImageButton.addEventListener('click', () => {
+        imageUpload.click();
+    });
+
+    imageUpload.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // 检查文件类型
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+        if (!allowedTypes.includes(file.type)) {
+            alert('Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.');
+            imageUpload.value = '';
+            return;
+        }
+
+        // 检查文件大小 (10MB)
+        if (file.size > 10 * 1024 * 1024) {
+            alert('Image file is too large. Maximum size is 10MB.');
+            imageUpload.value = '';
+            return;
+        }
+
+        updateImagePreview(file);
+    });
+
+    removeImageButton.addEventListener('click', clearSelectedImage);
 
     // KEY 按钮事件监听器
     keyButton.addEventListener('click', (e) => {
