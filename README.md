@@ -15,6 +15,7 @@ A simple, anonymous message board web application built with Node.js, Express, E
 *   **Private Messages with KEY Protection**: Post private messages protected by a KEY. Only users who know the correct KEY can view these messages.
 *   **User Authentication**: Register and login system with session-based authentication.
 *   **User-Specific Private Messages**: Logged-in users can view all their private messages without entering KEYs individually.
+*   **Image Upload Support**: Upload and display images in messages (one image per message, max 10MB, supports JPEG, PNG, GIF, WebP).
 *   **Responsive Design**: The application is designed to be accessible and usable across various devices, with mobile-friendly buttons.
 *   **Dockerized Deployment**: Easy setup and deployment using Docker and Docker Compose.
 
@@ -27,6 +28,7 @@ A simple, anonymous message board web application built with Node.js, Express, E
 *   **Styling**: Tailwind CSS (configured for `darkMode: 'class'`)
 *   **Client-side Logic**: Native JavaScript (Fetch API)
 *   **Markdown Rendering**: Showdown.js
+*   **File Upload**: Multer for handling image uploads
 *   **Containerization**: Docker, Docker Compose
 
 ## Getting Started
@@ -124,6 +126,29 @@ Once the Docker containers are up and running, open your web browser and navigat
 *   **Logout**:
     - Click the "登出" button in the top-right corner when logged in
 
+### Image Messages
+
+*   **Post a Message with Image**:
+    1. Type your message in the text area (optional - you can post just an image)
+    2. Click the "Upload Image" button below the text area
+    3. Select an image file from your device (JPEG, PNG, GIF, or WebP, max 10MB)
+    4. The image preview will appear below the upload button
+    5. Click "Post Message" to send
+    *Note: Each message can contain either text, an image, or both*
+
+*   **View Image Messages**:
+    - Images are displayed above the text content in messages
+    - Click on an image to view it in full size
+    - Image messages follow the same privacy rules as text messages
+
+*   **Remove Selected Image**:
+    - Click the "Remove" button on the image preview to cancel image selection
+    - This only removes the selection before posting, not already posted images
+
+*   **Edit Image Messages**:
+    - Messages containing images cannot be edited (to maintain one-image-per-message constraint)
+    - To modify an image message, delete it and create a new one
+
 #### User-Specific Features
 *   **Automatic Private Message Access**: Once logged in, all your private messages are automatically displayed without needing to enter KEYs.
 *   **Dual-Mode Private Messages**:
@@ -196,9 +221,48 @@ curl -s -X POST "http://localhost:1989/api/auth/logout" \
   -b cookies.txt
 ```
 
+#### Image Upload API
+
+**9. Upload an image**
+```bash
+curl -s -X POST "http://localhost:1989/api/upload" \
+  -F "image=@/path/to/your/image.jpg" \
+  -H "Content-Type: multipart/form-data"
+```
+
+**10. Post a message with image (two-step process)**
+```bash
+# Step 1: Upload the image
+curl -s -X POST "http://localhost:1989/api/upload" \
+  -F "image=@/path/to/your/image.jpg" \
+  -H "Content-Type: multipart/form-data" \
+  -o upload-response.json
+
+# Step 2: Post message with image reference
+curl -s -X POST "http://localhost:1989/api/messages" \
+  -H "Content-Type: application/json" \
+  -d "$(cat <<'EOF'
+{
+  "content": "Message with image",
+  "hasImage": true,
+  "imageFilename": "$(jq -r '.filename' upload-response.json)",
+  "imageMimeType": "$(jq -r '.mimeType' upload-response.json)",
+  "imageSize": $(jq -r '.size' upload-response.json)
+}
+EOF
+)"
+```
+
+**11. Post private message with image**
+```bash
+curl -s -X POST "http://localhost:1989/api/messages" \
+  -H "Content-Type: application/json" \
+  -d "{\"content\": \"Private image message\", \"isPrivate\": true, \"privateKey\": \"secret123\", \"hasImage\": true, \"imageFilename\": \"1734267890123_abc123_image.jpg\", \"imageMimeType\": \"image/jpeg\", \"imageSize\": 102400}"
+```
+
 #### Advanced Examples
 
-**9. Post message as logged-in user (with session cookie)**
+**12. Post message as logged-in user (with session cookie)**
 ```bash
 curl -s -X POST "http://localhost:1989/api/messages" \
   -H "Content-Type: application/json" \
@@ -206,7 +270,7 @@ curl -s -X POST "http://localhost:1989/api/messages" \
   -b cookies.txt
 ```
 
-**10. Post private message as logged-in user (auto-generates KEY)**
+**13. Post private message as logged-in user (auto-generates KEY)**
 ```bash
 curl -s -X POST "http://localhost:1989/api/messages" \
   -H "Content-Type: application/json" \
@@ -214,7 +278,7 @@ curl -s -X POST "http://localhost:1989/api/messages" \
   -b cookies.txt
 ```
 
-**11. Get messages for logged-in user (shows user's private messages)**
+**14. Get messages for logged-in user (shows user's private messages)**
 ```bash
 curl -s "http://localhost:1989/api/messages" \
   -b cookies.txt
@@ -230,7 +294,39 @@ curl -s "http://localhost:1989/api/messages" \
   "timestamp": "2025-12-12 14:04:51",
   "is_private": 0,
   "private_key": null,
-  "user_id": null
+  "user_id": null,
+  "has_image": 0,
+  "image_filename": null,
+  "image_mime_type": null,
+  "image_size": null
+}
+```
+
+**Image message post response:**
+```json
+{
+  "id": 6,
+  "content": "Check out this image!",
+  "timestamp": "2025-12-15 15:30:45",
+  "is_private": 0,
+  "private_key": null,
+  "user_id": null,
+  "has_image": 1,
+  "image_filename": "1734267890123_abc123_image.jpg",
+  "image_mime_type": "image/jpeg",
+  "image_size": 102400
+}
+```
+
+**Image upload response:**
+```json
+{
+  "success": true,
+  "filename": "1734267890123_abc123_image.jpg",
+  "originalName": "myphoto.jpg",
+  "mimeType": "image/jpeg",
+  "size": 102400,
+  "url": "/uploads/1734267890123_abc123_image.jpg"
 }
 ```
 
@@ -244,7 +340,23 @@ curl -s "http://localhost:1989/api/messages" \
       "timestamp": "2025-12-12 14:03:29",
       "is_private": 0,
       "private_key": null,
-      "user_id": null
+      "user_id": null,
+      "has_image": 0,
+      "image_filename": null,
+      "image_mime_type": null,
+      "image_size": null
+    },
+    {
+      "id": 2,
+      "content": "Message with image",
+      "timestamp": "2025-12-15 15:35:20",
+      "is_private": 0,
+      "private_key": null,
+      "user_id": null,
+      "has_image": 1,
+      "image_filename": "1734267890123_abc123_image.jpg",
+      "image_mime_type": "image/jpeg",
+      "image_size": 102400
     }
   ],
   "hasPrivateMessages": false,
@@ -515,6 +627,7 @@ This project uses SQLite for its database, which stores all data in a single fil
 ## Project Structure
 
 *   `./data/`: Contains the `messages.db` SQLite database file (persisted via Docker volume).
+    *   `data/uploads/`: Directory for uploaded image files (created automatically).
 *   `./public/`: Static assets (CSS, client-side JS).
     *   `public/js/main.js`: Main client-side script for dynamic interactions (modified to support private messages).
     *   `public/style.css`: Compiled Tailwind CSS output.
@@ -551,6 +664,36 @@ The following files were modified to implement the private messages feature:
    - Modified message posting flow to show type selection dialog
    - Updated message loading to filter by private KEY
    - Added error handling for invalid KEY input
+
+#### Image Upload Feature
+The following modifications were made to implement image upload functionality:
+
+1. **`package.json`**:
+   - Added new dependency: `multer` for handling file uploads
+
+2. **`src/index.js`**:
+   - Added `has_image`, `image_filename`, `image_mime_type`, `image_size` columns to the `messages` table
+   - Added Multer configuration for image uploads (10MB limit, image files only)
+   - Added `/api/upload` endpoint for image uploads
+   - Added permission middleware for image access (follows same rules as messages)
+   - Modified `POST /api/messages` to accept image parameters
+   - Enhanced `DELETE /api/messages/:id` to delete associated image files
+   - Added orphaned image cleanup function (runs hourly)
+
+3. **`views/index.ejs`**:
+   - Added image upload button below message input area
+   - Added hidden file input for image selection
+   - Added image preview container with remove button
+   - Added image status display
+
+4. **`public/js/main.js`**:
+   - Added image upload state management (`selectedImage` variable)
+   - Added `uploadImage()` function for uploading images to server
+   - Added image selection and preview functionality
+   - Modified `renderMessage()` to display images in messages
+   - Added click-to-view functionality for images
+   - Modified message posting to handle images (two-step process: upload then post)
+   - Added restriction: messages with images cannot be edited
 
 #### User Authentication Feature
 The following modifications were made to implement user authentication:
@@ -613,6 +756,15 @@ When upgrading to the version with user authentication, the database will be aut
 
 All existing messages will have `user_id` set to `NULL` (anonymous messages).
 
+#### For Image Upload Feature
+When upgrading to the version with image upload support, the database will be automatically migrated to include:
+- `has_image` column in `messages` table (default 0)
+- `image_filename` column in `messages` table (default NULL)
+- `image_mime_type` column in `messages` table (default NULL)
+- `image_size` column in `messages` table (default NULL)
+
+The application will also create the `./data/uploads/` directory for storing uploaded images.
+
 ### Clearing the Database
 
 If you need to clear all messages and start fresh, you can delete the database files. The application uses two SQLite database files stored in the `./data/` directory:
@@ -620,13 +772,16 @@ If you need to clear all messages and start fresh, you can delete the database f
 1. **`messages.db`** - Stores all messages (public and private)
 2. **`sessions.db`** - Stores user session data
 
+Additionally, uploaded image files are stored in the `./data/uploads/` directory.
+
 #### Method 1: Stop containers and delete files (Recommended)
 ```bash
 # Stop the running containers
 docker compose down
 
-# Delete the database files
+# Delete the database files and uploaded images
 rm -f data/messages.db data/sessions.db
+rm -rf data/uploads/*
 
 # Restart the containers (new databases will be created automatically)
 docker compose up -d
@@ -634,8 +789,9 @@ docker compose up -d
 
 #### Method 2: Delete files while containers are running
 ```bash
-# Delete the database files
+# Delete the database files and uploaded images
 rm -f data/messages.db data/sessions.db
+rm -rf data/uploads/*
 
 # Restart the application container to recreate databases
 docker compose restart message-board
@@ -643,12 +799,13 @@ docker compose restart message-board
 
 #### Method 3: Using a one-liner command
 ```bash
-docker compose down && rm -f data/messages.db data/sessions.db && docker compose up -d
+docker compose down && rm -f data/messages.db data/sessions.db && rm -rf data/uploads/* && docker compose up -d
 ```
 
 **Note**:
 - Deleting `sessions.db` will log out all users
 - Deleting `messages.db` will remove ALL messages permanently
+- Deleting files in `data/uploads/` will remove ALL uploaded images
 - The application will automatically create new empty databases when restarted
 - User accounts are stored in `messages.db`, so deleting it will also remove all user accounts
 
