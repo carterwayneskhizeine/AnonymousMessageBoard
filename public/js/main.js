@@ -508,10 +508,10 @@ document.addEventListener('DOMContentLoaded', () => {
         messageElement.appendChild(contentContainer);
         messageElement.appendChild(footer);
 
-        // Add a container for comments, hidden by default
+        // Add a container for comments, visible by default
         const commentsContainer = document.createElement('div');
         commentsContainer.id = `comments-for-${message.id}`;
-        commentsContainer.className = 'hidden mt-4 pt-4 border-t border-gray-800';
+        commentsContainer.className = 'mt-4 pt-4 border-t border-gray-800';
         messageElement.appendChild(commentsContainer);
 
         return messageElement;
@@ -549,6 +549,8 @@ document.addEventListener('DOMContentLoaded', () => {
             messageList.innerHTML = '';
             messages.forEach(message => {
                 messageList.appendChild(renderMessage(message));
+                // 自动加载评论
+                loadCommentsForMessage(message.id);
             });
 
             // 渲染分页控件
@@ -875,24 +877,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const originalMessage = messages.find(m => m.id == id);
             if (originalMessage) {
                 const messageElement = document.querySelector(`[data-message-id='${id}']`);
-                const commentsContainer = document.getElementById(`comments-for-${id}`);
-                const wasCommentsVisible = commentsContainer && !commentsContainer.classList.contains('hidden');
-
                 const restoredElement = renderMessage(originalMessage);
 
-                // Preserve the comments container visibility state after render
-                const newCommentsContainer = restoredElement.querySelector(`#comments-for-${id}`);
-                if (newCommentsContainer) {
-                    if (wasCommentsVisible) {
-                        newCommentsContainer.classList.remove('hidden');
-                    } else {
-                        newCommentsContainer.classList.add('hidden');
-                    }
-                    // Ensure the comments container is properly placed in the DOM
-                    messageElement.replaceWith(restoredElement);
-                } else {
-                    messageElement.replaceWith(restoredElement);
-                }
+                // Replace the old element with the new one
+                messageElement.replaceWith(restoredElement);
+
+                // Load comments for the message (comments are visible by default)
+                loadCommentsForMessage(id);
             }
         } else if (action === 'copy') {
             const messageToCopy = messages.find(m => m.id == id);
@@ -915,9 +906,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (action === 'reply') {
             const commentsContainer = document.getElementById(`comments-for-${id}`);
             if (commentsContainer) {
-                const isHidden = commentsContainer.classList.toggle('hidden');
-                if (!isHidden) {
-                    // If the container is now visible, load the comments
+                // Load comments if not already loaded
+                if (commentsContainer.dataset.loaded !== 'true') {
                     loadCommentsForMessage(id);
                 }
             }
@@ -979,25 +969,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     messages[index] = updatedMessage;
                 }
 
-                // Check if comments were visible before update
-                const commentsContainer = document.getElementById(`comments-for-${id}`);
-                const wasCommentsVisible = commentsContainer && !commentsContainer.classList.contains('hidden');
-
                 // Create a new rendered element for the updated message
                 const newMessageElement = renderMessage(updatedMessage);
 
-                // Preserve the comments container visibility state after render
-                const newCommentsContainer = newMessageElement.querySelector(`#comments-for-${id}`);
-                if (newCommentsContainer) {
-                    if (wasCommentsVisible) {
-                        newCommentsContainer.classList.remove('hidden');
-                    } else {
-                        newCommentsContainer.classList.add('hidden');
-                    }
-                }
-
                 // Replace the old element with the new one
                 messageElement.replaceWith(newMessageElement);
+
+                // Load comments for the updated message (comments are visible by default)
+                loadCommentsForMessage(id);
             } else {
                 throw new Error('Failed to save message.');
             }
