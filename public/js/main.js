@@ -274,8 +274,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (isImage) {
                 // 显示图片预览
+                let imageUrl = `/uploads/${message.image_filename}`;
+                // 如果是私有消息，添加 private key 作为查询参数
+                if (message.is_private === 1 && message.private_key) {
+                    imageUrl += `?privateKey=${encodeURIComponent(message.private_key)}`;
+                }
                 const img = document.createElement('img');
-                img.src = `/uploads/${message.image_filename}`;
+                img.src = imageUrl;
                 img.alt = 'Uploaded image';
                 img.className = 'max-w-full max-h-96 rounded-lg border border-gray-800 cursor-pointer hover:opacity-90 transition-opacity';
 
@@ -352,8 +357,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 fileInfoText.textContent = fileInfoStr;
 
                 // 下载链接
+                let downloadUrl = `/uploads/${message.image_filename}`;
+                // 如果是私有消息，添加 private key 作为查询参数
+                if (message.is_private === 1 && message.private_key) {
+                    downloadUrl += `?privateKey=${encodeURIComponent(message.private_key)}`;
+                }
                 const downloadLink = document.createElement('a');
-                downloadLink.href = `/uploads/${message.image_filename}`;
+                downloadLink.href = downloadUrl;
                 downloadLink.download = message.image_filename;
                 downloadLink.className = 'inline-block mt-1 text-sm text-blue-400 hover:text-blue-300';
                 downloadLink.innerHTML = 'Download File <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>';
