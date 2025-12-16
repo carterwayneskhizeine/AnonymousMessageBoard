@@ -1501,16 +1501,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (comment.deletable) {
             actionsElement.innerHTML += `<button data-action="delete" data-id="${comment.id}" class="text-gray-400 hover:text-red-400 ml-2">Delete</button>`;
         }
-        // Only show reply button if nesting depth is less than 6
-        if (depth < 6) {
+        // Only show reply button if nesting depth is less than 2
+        if (depth < 2) {
             actionsElement.innerHTML += `<button data-action="reply" data-id="${comment.id}" class="text-gray-400 hover:text-gray-200 ml-2">Reply</button>`;
         }
-        // For depth 6 and above, no reply button is shown
+        // For depth 2 and above, no reply button is shown
 
-        // Replies container - limit nesting to 6 levels maximum
+        // Replies container - limit nesting to 2 levels maximum
         const repliesContainer = document.createElement('div');
 
-        if (depth >= 6) { // After 6 levels of nesting, stop creating nested styling
+        if (depth >= 2) { // After 2 levels of nesting, stop creating nested styling
             // Still render the replies but without the nesting indentation and styling
             repliesContainer.className = 'mt-2 replies-container';
             if (comment.replies && comment.replies.length > 0) {
