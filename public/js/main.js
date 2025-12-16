@@ -288,16 +288,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 添加点击放大功能
                 img.addEventListener('click', () => {
                     const modal = document.createElement('div');
-                    modal.className = 'fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-4';
+                    modal.className = 'fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-4';
                     modal.innerHTML = `
-                        <div class="relative max-w-4xl max-h-[90vh]">
-                            <img src="${img.src}" alt="Full size image" class="max-w-full max-h-[90vh] rounded-lg">
-                            <button class="absolute top-4 right-4 bg-black/80 backdrop-blur-sm text-white p-2 rounded-full hover:bg-black/60 transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
+                        <div class="relative max-w-4xl max-h-[80vh] mb-4">
+                            <img src="${img.src}" alt="Full size image" class="max-w-full max-h-[80vh] rounded-lg">
                         </div>
+                        <button class="bg-black/80 backdrop-blur-sm text-white p-3 rounded-full hover:bg-black/60 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
                     `;
 
                     modal.querySelector('button').addEventListener('click', () => {
