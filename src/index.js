@@ -153,6 +153,7 @@ function createUsersTable() {
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
+    is_admin INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`, (err) => {
     if (err) {
@@ -273,8 +274,19 @@ const getCurrentUser = (req, res, next) => {
   if (req.session && req.session.userId) {
     req.userId = req.session.userId;
     req.username = req.session.username;
+
+    // Get user's admin status
+    db.get('SELECT is_admin FROM users WHERE id = ?', [req.session.userId], (err, user) => {
+      if (err) {
+        console.error('Error checking user admin status:', err);
+      } else if (user) {
+        req.isAdmin = user.is_admin === 1;
+      }
+      next();
+    });
+  } else {
+    next();
   }
-  next();
 };
 
 // Apply getCurrentUser middleware to all routes
@@ -361,21 +373,32 @@ app.post('/api/auth/register', async (req, res) => {
 
       // Hash password and create user
       const passwordHash = await hashPassword(password);
-      db.run('INSERT INTO users (username, password_hash) VALUES (?, ?)',
-        [username, passwordHash], function(err) {
-          if (err) {
-            return res.status(500).json({ error: 'Failed to create user' });
-          }
 
-          // Set session
-          req.session.userId = this.lastID;
-          req.session.username = username;
+      // Check if this is the first user (no users exist yet)
+      db.get('SELECT COUNT(*) as count FROM users', [], (err, row) => {
+        if (err) {
+          return res.status(500).json({ error: 'Database error' });
+        }
 
-          res.status(201).json({
-            message: 'User registered successfully',
-            user: { id: this.lastID, username }
+        const isFirstUser = row.count === 0;
+        const isAdmin = isFirstUser ? 1 : 0;
+
+        db.run('INSERT INTO users (username, password_hash, is_admin) VALUES (?, ?, ?)',
+          [username, passwordHash, isAdmin], function(err) {
+            if (err) {
+              return res.status(500).json({ error: 'Failed to create user' });
+            }
+
+            // Set session
+            req.session.userId = this.lastID;
+            req.session.username = username;
+
+            res.status(201).json({
+              message: 'User registered successfully',
+              user: { id: this.lastID, username, is_admin: isAdmin }
+            });
           });
-        });
+      });
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -435,7 +458,13 @@ app.post('/api/auth/logout', (req, res) => {
 // Get current user info
 app.get('/api/auth/me', (req, res) => {
   if (req.userId) {
-    res.json({ user: { id: req.userId, username: req.username } });
+    res.json({
+      user: {
+        id: req.userId,
+        username: req.username,
+        is_admin: req.isAdmin || false
+      }
+    });
   } else {
     res.status(401).json({ error: 'Not authenticated' });
   }
@@ -845,8 +874,8 @@ app.get('/api/comments', (req, res) => {
         } : null,
         vote: 0,  // 当前用户投票状态，需要根据当前用户确定
         controversy: 0,  // 争议度，可计算
-        deletable: row.user_id === req.userId || req.userId,  // 是否可删除
-        editable: row.user_id === req.userId && row.is_editable === 1,  // 是否可编辑
+        deletable: row.user_id === req.userId || req.isAdmin,  // 是否可删除
+        editable: (row.user_id === req.userId && row.is_editable === 1) || req.isAdmin,  // 是否可编辑
         replies: []  // 子回复，将在后续查询中填充
       }));
 
@@ -897,8 +926,8 @@ app.get('/api/comments', (req, res) => {
               } : null,
               vote: 0,
               controversy: 0,
-              deletable: reply.user_id === req.userId || req.userId,
-              editable: reply.user_id === req.userId && reply.is_editable === 1,
+              deletable: reply.user_id === req.userId || req.isAdmin,
+              editable: (reply.user_id === req.userId && reply.is_editable === 1) || req.isAdmin,
               replies: []  // 为嵌套回复准备的数组
             }));
 
@@ -1053,8 +1082,8 @@ app.post('/api/comments', (req, res) => {
             } : null,
             vote: 0,
             controversy: 0,
-            deletable: row.user_id === req.userId || req.userId,
-            editable: row.user_id === req.userId && row.is_editable === 1
+            deletable: row.user_id === req.userId || req.isAdmin,
+            editable: (row.user_id === req.userId && row.is_editable === 1) || req.isAdmin
           };
 
           res.status(201).json(comment);
@@ -1083,14 +1112,22 @@ app.put('/api/comments/:id', (req, res) => {
       return res.status(404).json({ error: 'Comment not found' });
     }
 
-    // 检查权限：用户只能更新自己的评论
-    if (!comment.user_id || comment.user_id !== req.userId) {
-      return res.status(403).json({ error: 'You can only update your own comments' });
-    }
+    // 检查权限：用户只能更新自己的评论，但管理员可以更新任何评论
+    if (!req.isAdmin) {
+      // 非管理员用户：只能编辑自己的评论
+      if (!comment.user_id || comment.user_id !== req.userId) {
+        return res.status(403).json({ error: 'You can only update your own comments' });
+      }
 
-    // 检查评论是否可编辑
-    if (comment.is_editable !== 1) {
-      return res.status(400).json({ error: 'This comment is not editable' });
+      // 非管理员用户：检查评论是否可编辑
+      if (comment.is_editable !== 1) {
+        return res.status(400).json({ error: 'This comment is not editable' });
+      }
+    } else {
+      // 管理员：可以编辑任何评论，但不能编辑不可编辑的评论（除非特殊权限）
+      if (comment.is_editable !== 1) {
+        return res.status(400).json({ error: 'This comment is not editable' });
+      }
     }
 
     db.run(`UPDATE comments SET text = ? WHERE id = ?`, [text.trim(), id], function(err) {
@@ -1135,8 +1172,8 @@ app.put('/api/comments/:id', (req, res) => {
           },
           vote: 0,
           controversy: 0,
-          deletable: row.user_id === req.userId || req.userId,
-          editable: row.user_id === req.userId && row.is_editable === 1
+          deletable: row.user_id === req.userId || req.isAdmin,
+          editable: (row.user_id === req.userId && row.is_editable === 1) || req.isAdmin
         };
 
         res.status(200).json(updatedComment);
@@ -1160,8 +1197,8 @@ app.delete('/api/comments/:id', (req, res) => {
       return res.status(404).json({ error: 'Comment not found' });
     }
 
-    // 检查权限：用户只能删除自己的评论
-    if (!comment.user_id || comment.user_id !== req.userId) {
+    // 检查权限：用户只能删除自己的评论，但管理员可以删除任何评论
+    if (!req.isAdmin && (!comment.user_id || comment.user_id !== req.userId)) {
       return res.status(403).json({ error: 'You can only delete your own comments' });
     }
 
