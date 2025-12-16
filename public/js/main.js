@@ -1459,7 +1459,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Action buttons
         const actionsElement = document.createElement('div');
-        actionsElement.className = 'flex items-center space-x-4 text-sm';
+        actionsElement.className = 'flex items-center gap-2 text-sm';
 
         // Vote buttons
         actionsElement.innerHTML = `
