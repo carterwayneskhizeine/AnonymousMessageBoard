@@ -1288,4 +1288,644 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     `;
     document.head.appendChild(style);
+
+    // ==================== Comments Functionality ====================
+
+    // DOM elements for comments
+    const commentForm = document.getElementById('comment-form');
+    const commentInput = document.getElementById('comment-input');
+    const commentsContainer = document.getElementById('comments-container');
+    const postCommentButton = document.getElementById('post-comment-button');
+    const commentErrorMessage = document.getElementById('comment-error-message');
+
+    // Global state for comments
+    let comments = [];
+    let commentsCurrentPage = 1;
+    let commentsTotalPages = 1;
+    const commentsPerPage = 10;
+
+    // Fetch and render comments
+    const fetchAndRenderComments = async (page = 1) => {
+        try {
+            // Use the current page URL for comments
+            const url = window.location.href.split('#')[0]; // Remove hash if present
+
+            const response = await fetch(`/api/comments?url=${encodeURIComponent(url)}&page=${page}&limit=${commentsPerPage}`);
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch comments: ${response.status} ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            comments = data.comments || [];
+            commentsCurrentPage = data.pagination?.page || 1;
+            commentsTotalPages = data.pagination?.totalPages || 1;
+
+            renderComments();
+            renderCommentsPagination();
+        } catch (error) {
+            console.error('Error fetching comments:', error);
+            showError(commentErrorMessage, `Error loading comments: ${error.message}`);
+        }
+    };
+
+    // Render comments list
+    const renderComments = () => {
+        commentsContainer.innerHTML = '';
+
+        if (comments.length === 0) {
+            commentsContainer.innerHTML = '<div class="text-gray-500 text-center py-4">No comments yet. Be the first to comment!</div>';
+            return;
+        }
+
+        comments.forEach(comment => {
+            const commentElement = createCommentElement(comment);
+            commentsContainer.appendChild(commentElement);
+        });
+    };
+
+    // Create individual comment element
+    const createCommentElement = (comment) => {
+        const commentElement = document.createElement('div');
+        commentElement.className = 'mb-4 bg-gray-900 border border-gray-800 rounded-lg p-4';
+        commentElement.dataset.commentId = comment.id;
+
+        // Format time for display
+        const commentTime = new Date(comment.time).toLocaleString();
+
+        // User info
+        const userElement = document.createElement('div');
+        userElement.className = 'flex items-center mb-2';
+        userElement.innerHTML = `
+            <div class="flex items-center flex-1">
+                <span class="font-semibold text-gray-200">${comment.user.name}</span>
+                ${comment.user.verified ? '<span class="ml-2 text-blue-400 text-sm">✓ Verified</span>' : ''}
+                <span class="ml-2 text-gray-500 text-sm">${commentTime}</span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <span class="text-gray-500 text-sm">${comment.score} points</span>
+            </div>
+        `;
+
+        // Comment text
+        const textElement = document.createElement('div');
+        textElement.className = 'mb-3 text-gray-300';
+        textElement.innerHTML = converter.makeHtml(comment.text);
+
+        // Action buttons
+        const actionsElement = document.createElement('div');
+        actionsElement.className = 'flex items-center space-x-4 text-sm';
+
+        // Vote buttons
+        const voteButtons = document.createElement('div');
+        voteButtons.className = 'flex items-center space-x-1';
+        voteButtons.innerHTML = `
+            <button class="vote-btn text-gray-400 hover:text-blue-400" data-vote="up" data-id="${comment.id}">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+                </svg>
+            </button>
+            <span class="text-gray-400">${comment.score}</span>
+            <button class="vote-btn text-gray-400 hover:text-red-400" data-vote="down" data-id="${comment.id}">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
+        `;
+
+        // Edit button (only for user's own comments)
+        let editButton = '';
+        if (comment.editable) {
+            editButton = `<button class="edit-btn text-gray-400 hover:text-gray-200 ml-2" data-id="${comment.id}">Edit</button>`;
+        }
+
+        // Delete button (only for user's own comments)
+        let deleteButton = '';
+        if (comment.deletable) {
+            deleteButton = `<button class="delete-btn text-gray-400 hover:text-red-400 ml-2" data-id="${comment.id}">Delete</button>`;
+        }
+
+        // Reply button
+        const replyButton = `<button class="reply-btn text-gray-400 hover:text-gray-200 ml-2" data-id="${comment.id}">Reply</button>`;
+
+        actionsElement.appendChild(voteButtons);
+        if (editButton) {
+            const editBtn = document.createElement('button');
+            editBtn.className = 'edit-btn text-gray-400 hover:text-gray-200 ml-2';
+            editBtn.dataset.id = comment.id;
+            editBtn.textContent = 'Edit';
+            actionsElement.appendChild(editBtn);
+        }
+        if (deleteButton) {
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-btn text-gray-400 hover:text-red-400 ml-2';
+            deleteBtn.dataset.id = comment.id;
+            deleteBtn.textContent = 'Delete';
+            actionsElement.appendChild(deleteBtn);
+        }
+
+        // Add reply button
+        const replyBtn = document.createElement('button');
+        replyBtn.className = 'reply-btn text-gray-400 hover:text-gray-200 ml-2';
+        replyBtn.dataset.id = comment.id;
+        replyBtn.textContent = 'Reply';
+        actionsElement.appendChild(replyBtn);
+
+        // Replies container (if any replies exist)
+        const repliesContainer = document.createElement('div');
+        repliesContainer.className = 'ml-6 mt-4 border-l-2 border-gray-800 pl-4';
+        if (comment.replies && comment.replies.length > 0) {
+            comment.replies.forEach(reply => {
+                const replyElement = createReplyElement(reply);
+                repliesContainer.appendChild(replyElement);
+            });
+        }
+
+        // Assemble the comment element
+        commentElement.appendChild(userElement);
+        commentElement.appendChild(textElement);
+        commentElement.appendChild(actionsElement);
+        commentElement.appendChild(repliesContainer);
+
+        return commentElement;
+    };
+
+    // Create reply element (with potential nested replies)
+    const createReplyElement = (reply) => {
+        const replyElement = document.createElement('div');
+        replyElement.className = 'mb-3 bg-gray-800 border border-gray-700 rounded-lg p-3';
+        replyElement.dataset.commentId = reply.id;
+
+        const commentTime = new Date(reply.time).toLocaleString();
+
+        // Determine if reply has actions (edit/delete) based on user permissions
+        const editButton = reply.editable ?
+            `<button class="edit-btn text-gray-400 hover:text-gray-200 ml-2 reply-action-btn" data-id="${reply.id}">Edit</button>` : '';
+        const deleteButton = reply.deletable ?
+            `<button class="delete-btn text-gray-400 hover:text-red-400 ml-2 reply-action-btn" data-id="${reply.id}">Delete</button>` : '';
+
+        replyElement.innerHTML = `
+            <div class="flex items-center mb-1">
+                <span class="font-semibold text-gray-200">${reply.user.name}</span>
+                ${reply.user.verified ? '<span class="ml-2 text-blue-400 text-xs">✓ Verified</span>' : ''}
+                <span class="ml-2 text-gray-500 text-xs">${commentTime}</span>
+            </div>
+            <div class="text-gray-300 text-sm mb-2">${converter.makeHtml(reply.text)}</div>
+            <div class="flex items-center space-x-2 text-xs">
+                <span class="text-gray-500">${reply.score} points</span>
+                <div class="flex items-center space-x-1">
+                    <button class="vote-btn text-gray-400 hover:text-blue-400" data-vote="up" data-id="${reply.id}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+                        </svg>
+                    </button>
+                    <span class="text-gray-400">${reply.score}</span>
+                    <button class="vote-btn text-gray-400 hover:text-red-400" data-vote="down" data-id="${reply.id}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                </div>
+                ${editButton}
+                ${deleteButton}
+                <button class="reply-btn text-gray-400 hover:text-gray-200 ml-2 reply-action-btn" data-id="${reply.id}">Reply</button>
+            </div>
+        `;
+
+        // Add container for nested replies (if they exist)
+        if (reply.replies && reply.replies.length > 0) {
+            const nestedRepliesContainer = document.createElement('div');
+            nestedRepliesContainer.className = 'ml-4 mt-3 pl-3 border-l-2 border-gray-700 pt-2';
+
+            reply.replies.forEach(nestedReply => {
+                const nestedReplyElement = createReplyElement(nestedReply); // Recursive call
+                nestedRepliesContainer.appendChild(nestedReplyElement);
+            });
+
+            replyElement.appendChild(nestedRepliesContainer);
+        }
+
+        return replyElement;
+    };
+
+    // Render comments pagination
+    const renderCommentsPagination = () => {
+        const paginationContainer = document.getElementById('comments-pagination-container');
+        paginationContainer.innerHTML = '';
+
+        if (commentsTotalPages <= 1) return;
+
+        const paginationElement = document.createElement('div');
+        paginationElement.className = 'flex justify-center items-center space-x-1 my-6 py-4';
+
+        // Previous button
+        if (commentsCurrentPage > 1) {
+            const prevBtn = document.createElement('button');
+            prevBtn.className = 'px-3 py-1 border border-gray-700 rounded text-gray-400 hover:border-gray-100 hover:text-gray-100';
+            prevBtn.textContent = 'Previous';
+            prevBtn.addEventListener('click', () => {
+                fetchAndRenderComments(commentsCurrentPage - 1);
+            });
+            paginationElement.appendChild(prevBtn);
+        }
+
+        // Page numbers with Google-style ellipsis
+        const calculatePagesToShow = () => {
+            const totalPages = commentsTotalPages;
+            const currentPage = commentsCurrentPage;
+            const maxVisiblePages = 5; // Show max 5 page numbers
+
+            if (totalPages <= maxVisiblePages) {
+                // Show all pages
+                return Array.from({ length: totalPages }, (_, i) => i + 1);
+            }
+
+            // Calculate which pages to show
+            let startPage = Math.max(1, currentPage - 2);
+            let endPage = Math.min(totalPages, currentPage + 2);
+
+            // Adjust if we're near the beginning or end
+            if (currentPage <= 3) {
+                endPage = Math.min(totalPages, maxVisiblePages);
+            } else if (currentPage >= totalPages - 2) {
+                startPage = Math.max(1, totalPages - maxVisiblePages + 1);
+            }
+
+            // Create the page number array with ellipsis where needed
+            const pages = [];
+            if (startPage > 1) {
+                pages.push(1);
+                if (startPage > 2) {
+                    pages.push('...');
+                }
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                pages.push(i);
+            }
+
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    pages.push('...');
+                }
+                pages.push(totalPages);
+            }
+
+            return pages;
+        };
+
+        const pagesToShow = calculatePagesToShow();
+        pagesToShow.forEach(page => {
+            if (page === '...') {
+                const ellipsis = document.createElement('span');
+                ellipsis.className = 'px-2 text-gray-500';
+                ellipsis.textContent = '...';
+                paginationElement.appendChild(ellipsis);
+            } else {
+                const pageBtn = document.createElement('button');
+                pageBtn.className = `px-3 py-1 rounded ${page === commentsCurrentPage ? 'bg-gray-700 text-white' : 'border border-gray-700 text-gray-400 hover:border-gray-100 hover:text-gray-100'}`;
+                pageBtn.textContent = page;
+                pageBtn.addEventListener('click', () => {
+                    fetchAndRenderComments(page);
+                });
+                paginationElement.appendChild(pageBtn);
+            }
+        });
+
+        // Next button
+        if (commentsCurrentPage < commentsTotalPages) {
+            const nextBtn = document.createElement('button');
+            nextBtn.className = 'px-3 py-1 border border-gray-700 rounded text-gray-400 hover:border-gray-100 hover:text-gray-100';
+            nextBtn.textContent = 'Next';
+            nextBtn.addEventListener('click', () => {
+                fetchAndRenderComments(commentsCurrentPage + 1);
+            });
+            paginationElement.appendChild(nextBtn);
+        }
+
+        paginationContainer.appendChild(paginationElement);
+    };
+
+    // Handle posting a comment
+    const handlePostComment = async (e) => {
+        e.preventDefault();
+
+        const text = commentInput.value.trim();
+        if (!text) {
+            showError(commentErrorMessage, 'Comment cannot be empty');
+            return;
+        }
+
+        try {
+            // Use the current page URL for comments
+            const url = window.location.href.split('#')[0];
+
+            const response = await fetch('/api/comments', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    text: text,
+                    url: url
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to post comment');
+            }
+
+            const newComment = await response.json();
+
+            // Clear input and error message
+            commentInput.value = '';
+            clearError(commentErrorMessage);
+
+            // Refresh comments list
+            fetchAndRenderComments();
+        } catch (error) {
+            console.error('Error posting comment:', error);
+            showError(commentErrorMessage, `Error posting comment: ${error.message}`);
+        }
+    };
+
+    // Handle voting on a comment
+    const handleVote = async (commentId, vote) => {
+        try {
+            const response = await fetch(`/api/comments/${commentId}/vote`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    vote: vote
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to vote on comment');
+            }
+
+            const result = await response.json();
+
+            // Refresh comments list to show updated scores
+            fetchAndRenderComments(commentsCurrentPage);
+        } catch (error) {
+            console.error('Error voting on comment:', error);
+            alert(`Error voting: ${error.message}`);
+        }
+    };
+
+    // Handle editing a comment
+    const handleEditComment = async (commentId) => {
+        // Find the comment to edit
+        const comment = findCommentById(comments, commentId);
+        if (!comment) {
+            alert('Comment not found');
+            return;
+        }
+
+        // Check if the comment is editable
+        if (!comment.editable) {
+            alert('This comment cannot be edited');
+            return;
+        }
+
+        // Create an edit form
+        const commentElement = document.querySelector(`[data-comment-id="${commentId}"]`);
+        if (!commentElement) return;
+
+        // Create the edit form
+        const editForm = document.createElement('form');
+        editForm.className = 'edit-comment-form mt-3';
+        editForm.innerHTML = `
+            <textarea class="w-full p-2 bg-black border border-gray-800 rounded text-gray-200 text-sm"
+                      rows="3" id="edit-comment-${commentId}">${comment.text}</textarea>
+            <div class="flex justify-end space-x-2 mt-2">
+                <button type="button" class="cancel-edit-btn px-3 py-1 border border-gray-700 rounded text-gray-400 hover:border-gray-100 hover:text-gray-100 text-sm">
+                    Cancel
+                </button>
+                <button type="submit" class="save-edit-btn px-3 py-1 border border-gray-700 rounded text-gray-400 hover:border-gray-100 hover:text-gray-100 text-sm">
+                    Save
+                </button>
+            </div>
+        `;
+
+        // Insert the edit form into the comment element
+        commentElement.innerHTML = `
+            <div class="flex items-center mb-2">
+                <span class="font-semibold text-gray-200">${comment.user.name}</span>
+                ${comment.user.verified ? '<span class="ml-2 text-blue-400 text-sm">✓ Verified</span>' : ''}
+                <span class="ml-2 text-gray-500 text-sm">${new Date(comment.time).toLocaleString()}</span>
+            </div>
+        `;
+        commentElement.appendChild(editForm);
+
+        // Add event listeners to the edit form buttons
+        const saveBtn = editForm.querySelector('.save-edit-btn');
+        const cancelBtn = editForm.querySelector('.cancel-edit-btn');
+        const editTextarea = editForm.querySelector('textarea');
+
+        // Save button event
+        saveBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const newText = editTextarea.value.trim();
+            if (!newText) {
+                alert('Comment text cannot be empty');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/comments/${commentId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        text: newText
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to update comment');
+                }
+
+                // Refresh comments list
+                fetchAndRenderComments(commentsCurrentPage);
+            } catch (error) {
+                console.error('Error updating comment:', error);
+                alert(`Error updating comment: ${error.message}`);
+            }
+        });
+
+        // Cancel button event
+        cancelBtn.addEventListener('click', () => {
+            fetchAndRenderComments(commentsCurrentPage);
+        });
+    };
+
+    // Handle deleting a comment
+    const handleDeleteComment = async (commentId) => {
+        if (!confirm('Are you sure you want to delete this comment?')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/comments/${commentId}`, {
+                method: 'DELETE'
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to delete comment');
+            }
+
+            // Refresh comments list
+            fetchAndRenderComments(commentsCurrentPage);
+        } catch (error) {
+            console.error('Error deleting comment:', error);
+            alert(`Error deleting comment: ${error.message}`);
+        }
+    };
+
+    // Helper function to find a comment by ID (including nested replies)
+    const findCommentById = (commentsList, id) => {
+        for (const comment of commentsList) {
+            if (comment.id === id) {
+                return comment;
+            }
+            if (comment.replies && comment.replies.length > 0) {
+                const foundReply = findCommentById(comment.replies, id);
+                if (foundReply) return foundReply;
+            }
+        }
+        return null;
+    };
+
+    // Event listeners for comments
+    commentForm.addEventListener('submit', handlePostComment);
+
+    // Handle reply to a comment
+    const handleReply = (commentId) => {
+        // Find the comment element
+        const commentElement = document.querySelector(`[data-comment-id="${commentId}"]`);
+        if (!commentElement) return;
+
+        // Create the reply form
+        const replyForm = document.createElement('form');
+        replyForm.className = 'reply-form mt-3 ml-6 pt-3 border-t border-gray-800';
+        replyForm.innerHTML = `
+            <textarea class="w-full p-2 bg-black border border-gray-800 rounded text-gray-200 text-sm mb-2"
+                      rows="3" placeholder="Write your reply..."></textarea>
+            <div class="flex justify-end space-x-2">
+                <button type="button" class="cancel-reply-btn px-3 py-1 border border-gray-700 rounded text-gray-400 hover:border-gray-100 hover:text-gray-100 text-sm">
+                    Cancel
+                </button>
+                <button type="submit" class="post-reply-btn px-3 py-1 border border-gray-700 rounded text-gray-400 hover:border-gray-100 hover:text-gray-100 text-sm">
+                    Post Reply
+                </button>
+            </div>
+        `;
+
+        // Find the replies container or create one if it doesn't exist
+        let repliesContainer = commentElement.querySelector('.replies-container');
+        if (!repliesContainer) {
+            repliesContainer = document.createElement('div');
+            repliesContainer.className = 'replies-container ml-6 mt-4 border-l-2 border-gray-800 pl-4';
+            commentElement.appendChild(repliesContainer);
+        }
+
+        // Append the reply form to the replies container
+        repliesContainer.appendChild(replyForm);
+
+        // Add event listeners to the reply form buttons
+        const postReplyBtn = replyForm.querySelector('.post-reply-btn');
+        const cancelReplyBtn = replyForm.querySelector('.cancel-reply-btn');
+        const replyTextarea = replyForm.querySelector('textarea');
+
+        // Post reply button event
+        postReplyBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const text = replyTextarea.value.trim();
+            if (!text) {
+                alert('Reply cannot be empty');
+                return;
+            }
+
+            try {
+                // Use the current page URL for comments
+                const url = window.location.href.split('#')[0];
+
+                const response = await fetch('/api/comments', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        pid: commentId,  // This makes it a reply
+                        text: text,
+                        url: url
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to post reply');
+                }
+
+                const newComment = await response.json();
+
+                // Remove the reply form
+                replyForm.remove();
+
+                // Refresh comments list to show the new reply
+                fetchAndRenderComments(commentsCurrentPage);
+            } catch (error) {
+                console.error('Error posting reply:', error);
+                alert(`Error posting reply: ${error.message}`);
+            }
+        });
+
+        // Cancel reply button event
+        cancelReplyBtn.addEventListener('click', () => {
+            replyForm.remove();
+        });
+    };
+
+    // Delegated event listeners for comment actions
+    commentsContainer.addEventListener('click', (e) => {
+        // Handle vote buttons
+        if (e.target.closest('.vote-btn')) {
+            const button = e.target.closest('.vote-btn');
+            const commentId = button.dataset.id;
+            const vote = button.dataset.vote === 'up' ? 1 : -1;
+            handleVote(commentId, vote);
+        }
+        // Handle edit buttons
+        else if (e.target.closest('.edit-btn')) {
+            const button = e.target.closest('.edit-btn');
+            const commentId = button.dataset.id;
+            handleEditComment(commentId);
+        }
+        // Handle delete buttons
+        else if (e.target.closest('.delete-btn')) {
+            const button = e.target.closest('.delete-btn');
+            const commentId = button.dataset.id;
+            handleDeleteComment(commentId);
+        }
+        // Handle reply buttons
+        else if (e.target.closest('.reply-btn')) {
+            const button = e.target.closest('.reply-btn');
+            const commentId = button.dataset.id;
+            handleReply(commentId);
+        }
+    });
+
+    // Initialize comments when page loads
+    window.addEventListener('load', () => {
+        fetchAndRenderComments();
+    });
 });

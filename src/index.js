@@ -160,6 +160,34 @@ function createUsersTable() {
     } else {
       console.log('Users table created or already exists.');
 
+      // 创建 comments 表
+      createCommentsTable();
+    }
+  });
+}
+
+// 创建 comments 表
+function createCommentsTable() {
+  db.run(`CREATE TABLE IF NOT EXISTS comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    pid INTEGER DEFAULT NULL,  -- 父评论ID，用于回复
+    user_id INTEGER DEFAULT NULL,  -- 用户ID，NULL表示匿名用户
+    username TEXT NOT NULL,  -- 用户名，即使是匿名用户也会有名称
+    text TEXT NOT NULL,  -- 评论内容
+    score INTEGER DEFAULT 0,  -- 评论分数（赞/踩）
+    votes TEXT DEFAULT '{}',  -- 存储投票信息，格式为JSON字符串
+    time DATETIME DEFAULT CURRENT_TIMESTAMP,  -- 评论时间
+    is_deleted INTEGER DEFAULT 0,  -- 是否删除
+    is_editable INTEGER DEFAULT 1,  -- 是否可编辑
+    locator_url TEXT NOT NULL DEFAULT '',  -- 关联的页面URL
+    upvotes INTEGER DEFAULT 0,  -- 赞同票数
+    downvotes INTEGER DEFAULT 0  -- 反对票数
+  )`, (err) => {
+    if (err) {
+      console.error('Error creating comments table:', err.message);
+    } else {
+      console.log('Comments table created or already exists.');
+
       // 创建数据库索引
       createDatabaseIndexes();
     }
@@ -176,7 +204,11 @@ function createDatabaseIndexes() {
     { sql: `CREATE INDEX IF NOT EXISTS idx_messages_user_id ON messages(user_id)`, name: 'idx_messages_user_id' },
     { sql: `CREATE INDEX IF NOT EXISTS idx_messages_private_key ON messages(private_key)`, name: 'idx_messages_private_key' },
     { sql: `CREATE INDEX IF NOT EXISTS idx_messages_has_image ON messages(has_image)`, name: 'idx_messages_has_image' },
-    { sql: `CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)`, name: 'idx_users_username' }
+    { sql: `CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)`, name: 'idx_users_username' },
+    { sql: `CREATE INDEX IF NOT EXISTS idx_comments_time ON comments(time DESC)`, name: 'idx_comments_time' },
+    { sql: `CREATE INDEX IF NOT EXISTS idx_comments_pid ON comments(pid)`, name: 'idx_comments_pid' },
+    { sql: `CREATE INDEX IF NOT EXISTS idx_comments_user_id ON comments(user_id)`, name: 'idx_comments_user_id' },
+    { sql: `CREATE INDEX IF NOT EXISTS idx_comments_locator_url ON comments(locator_url)`, name: 'idx_comments_locator_url' }
   ];
 
   let completed = 0;
@@ -726,6 +758,513 @@ app.put('/api/messages/:id', (req, res) => {
         res.status(200).json(row);
       });
     });
+  });
+});
+
+// ==================== Comments API ====================
+
+// API: Get comments for a specific URL
+app.get('/api/comments', (req, res) => {
+  const { url, sort = '-time', page = 1, limit = 50 } = req.query;
+  const pageNum = parseInt(page);
+  const limitNum = parseInt(limit);
+  const offset = (pageNum - 1) * limitNum;
+
+  if (!url) {
+    return res.status(400).json({ error: 'URL parameter is required' });
+  }
+
+  // 构建基础查询 - 只获取未删除的评论（不包括回复，回复会单独查询）
+  let baseSql = `SELECT c.*, u.username as user_username
+                 FROM comments c
+                 LEFT JOIN users u ON c.user_id = u.id
+                 WHERE c.locator_url = ? AND c.is_deleted = 0 AND c.pid IS NULL`;  // 只查询顶级评论
+  let params = [url];
+
+  // 根据排序参数添加ORDER BY子句
+  let orderBy = '';
+  switch(sort) {
+    case '-time':
+      orderBy = 'ORDER BY c.time DESC';
+      break;
+    case '+time':
+      orderBy = 'ORDER BY c.time ASC';
+      break;
+    case '-score':
+      orderBy = 'ORDER BY c.score DESC, c.time DESC';
+      break;
+    case '+score':
+      orderBy = 'ORDER BY c.score ASC, c.time ASC';
+      break;
+    default:
+      orderBy = 'ORDER BY c.time DESC';
+  }
+
+  // 查询总数（只统计顶级评论）
+  const countSql = `SELECT COUNT(*) as total FROM comments WHERE locator_url = ? AND is_deleted = 0 AND pid IS NULL`;
+
+  // 查询分页数据，并包含用户信息
+  const dataSql = `${baseSql} ${orderBy} LIMIT ? OFFSET ?`;
+
+  // 执行总数查询
+  db.get(countSql, [url], (err, countResult) => {
+    if (err) {
+      console.error('Error counting comments:', err);
+      return res.status(500).json({ error: err.message });
+    }
+
+    const total = countResult.total || 0;
+    const totalPages = Math.ceil(total / limitNum);
+
+    // 执行分页查询
+    db.all(dataSql, [...params, limitNum, offset], (err, rows) => {
+      if (err) {
+        console.error('Error fetching comments:', err);
+        return res.status(500).json({ error: err.message });
+      }
+
+      // 处理返回数据格式，使其与Remark42兼容
+      const comments = rows.map(row => ({
+        id: row.id.toString(),  // Remark42使用字符串ID
+        pid: row.pid ? row.pid.toString() : null,
+        text: row.text,
+        user: {
+          id: row.user_id ? `user_${row.user_id}` : `anonymous_${row.username}`,
+          name: row.user_username || row.username,
+          picture: '',  // 可以添加头像URL
+          profile: '',  // 可以添加用户资料链接
+          verified: false  // 可以添加验证状态
+        },
+        score: row.score || 0,
+        time: new Date(row.time).toISOString(),
+        edit: row.is_editable ? {
+          edited: false,  // 当前是否已编辑
+          reason: '',     // 编辑原因
+          time: null      // 编辑时间
+        } : null,
+        vote: 0,  // 当前用户投票状态，需要根据当前用户确定
+        controversy: 0,  // 争议度，可计算
+        deletable: row.user_id === req.userId || req.userId,  // 是否可删除
+        editable: row.user_id === req.userId && row.is_editable === 1,  // 是否可编辑
+        replies: []  // 子回复，将在后续查询中填充
+      }));
+
+      // 递归函数：获取指定评论ID的所有子回复（包括嵌套的回复）
+      function fetchNestedReplies(parentIds) {
+        if (!parentIds || parentIds.length === 0) {
+          return Promise.resolve([]);
+        }
+
+        const placeholders = parentIds.map(() => '?').join(',');
+        const nestedRepliesSql = `SELECT c.*, u.username as user_username
+                                 FROM comments c
+                                 LEFT JOIN users u ON c.user_id = u.id
+                                 WHERE c.pid IN (${placeholders}) AND c.is_deleted = 0
+                                 ORDER BY c.time ASC`;
+
+        return new Promise((resolve, reject) => {
+          db.all(nestedRepliesSql, parentIds, (err, replies) => {
+            if (err) {
+              console.error('Error fetching nested comment replies:', err);
+              reject(err);
+              return;
+            }
+
+            if (replies.length === 0) {
+              resolve([]);
+              return;
+            }
+
+            // 创建回复对象
+            const replyObjects = replies.map(reply => ({
+              id: reply.id.toString(),
+              pid: reply.pid ? reply.pid.toString() : null,
+              text: reply.text,
+              user: {
+                id: reply.user_id ? `user_${reply.user_id}` : `anonymous_${reply.username}`,
+                name: reply.user_username || reply.username,
+                picture: '',
+                profile: '',
+                verified: false
+              },
+              score: reply.score || 0,
+              time: new Date(reply.time).toISOString(),
+              edit: reply.is_editable ? {
+                edited: false,
+                reason: '',
+                time: null
+              } : null,
+              vote: 0,
+              controversy: 0,
+              deletable: reply.user_id === req.userId || req.userId,
+              editable: reply.user_id === req.userId && reply.is_editable === 1,
+              replies: []  // 为嵌套回复准备的数组
+            }));
+
+            // 获取这些回复的嵌套回复
+            const replyIds = replies.map(r => parseInt(r.id));
+            fetchNestedReplies(replyIds)
+              .then(nestedReplies => {
+                // 将嵌套回复分配给它们的父回复
+                replyObjects.forEach(replyObj => {
+                  const nested = nestedReplies.filter(nr => nr.pid === replyObj.id);
+                  replyObj.replies = nested;
+                });
+                resolve(replyObjects);
+              })
+              .catch(reject);
+          });
+        });
+      }
+
+      // 对于每个顶级评论，获取其所有嵌套回复
+      if (comments.length > 0) {
+        const topCommentIds = comments.map(c => parseInt(c.id));
+
+        fetchNestedReplies(topCommentIds)
+          .then(nestedReplies => {
+            // 将嵌套回复分配给顶级评论
+            comments.forEach(comment => {
+              const repliesToThisComment = nestedReplies.filter(reply => reply.pid === comment.id);
+              comment.replies = repliesToThisComment;
+            });
+
+            // 返回分页结果
+            res.json({
+              comments: comments,
+              info: {
+                url: url,
+                count: total,
+                first_time: comments.length > 0 ? comments[comments.length - 1].time : null,
+                last_time: comments.length > 0 ? comments[0].time : null,
+                sort: sort
+              },
+              pagination: {
+                page: pageNum,
+                limit: limitNum,
+                total,
+                totalPages,
+                hasNextPage: pageNum < totalPages,
+                hasPrevPage: pageNum > 1
+              }
+            });
+          })
+          .catch(err => {
+            console.error('Error in nested replies:', err);
+            res.status(500).json({ error: err.message });
+          });
+      } else {
+        // 没有主评论，直接返回结果
+        res.json({
+          comments: comments,
+          info: {
+            url: url,
+            count: total,
+            first_time: null,
+            last_time: null,
+            sort: sort
+          },
+          pagination: {
+            page: pageNum,
+            limit: limitNum,
+            total,
+            totalPages,
+            hasNextPage: pageNum < totalPages,
+            hasPrevPage: pageNum > 1
+          }
+        });
+      }
+    });
+  });
+});
+
+// API: Post a new comment
+app.post('/api/comments', (req, res) => {
+  const { pid = null, text, url } = req.body;
+
+  // 验证必需参数
+  if (!text || text.trim() === '') {
+    return res.status(400).json({ error: 'Comment text is required' });
+  }
+
+  if (!url) {
+    return res.status(400).json({ error: 'URL is required' });
+  }
+
+  // 检查父评论是否存在（如果提供了pid）
+  if (pid) {
+    db.get('SELECT id FROM comments WHERE id = ?', [pid], (err, row) => {
+      if (err) {
+        console.error('Error checking parent comment:', err);
+        return res.status(500).json({ error: err.message });
+      }
+
+      if (!row) {
+        return res.status(400).json({ error: 'Parent comment does not exist' });
+      }
+
+      insertComment();
+    });
+  } else {
+    insertComment();
+  }
+
+  // 插入评论的函数
+  function insertComment() {
+    // 确定用户名和用户ID
+    const userId = req.userId || null;
+    const username = req.userId
+      ? req.username
+      : `anonymous_${Math.random().toString(36).substring(2, 10)}`;  // 生成匿名用户名
+
+    db.run(`INSERT INTO comments (pid, user_id, username, text, locator_url) VALUES (?, ?, ?, ?, ?)`,
+      [pid, userId, username, text.trim(), url], function(err) {
+        if (err) {
+          console.error('Error inserting comment:', err);
+          return res.status(500).json({ error: err.message });
+        }
+
+        // 获取插入的完整评论对象
+        db.get(`SELECT * FROM comments WHERE id = ?`, [this.lastID], (err, row) => {
+          if (err) {
+            console.error('Error fetching inserted comment:', err);
+            return res.status(500).json({ error: err.message });
+          }
+
+          // 返回与Remark42兼容的格式
+          const comment = {
+            id: row.id.toString(),
+            pid: row.pid ? row.pid.toString() : null,
+            text: row.text,
+            user: {
+              id: row.user_id ? `user_${row.user_id}` : `anonymous_${row.username}`,
+              name: req.username || row.username,
+              picture: '',
+              profile: '',
+              verified: false
+            },
+            score: row.score || 0,
+            time: new Date(row.time).toISOString(),
+            edit: row.is_editable ? {
+              edited: false,
+              reason: '',
+              time: null
+            } : null,
+            vote: 0,
+            controversy: 0,
+            deletable: row.user_id === req.userId || req.userId,
+            editable: row.user_id === req.userId && row.is_editable === 1
+          };
+
+          res.status(201).json(comment);
+        });
+      });
+  }
+});
+
+// API: Update a comment
+app.put('/api/comments/:id', (req, res) => {
+  const { id } = req.params;
+  const { text } = req.body;
+
+  if (!text || text.trim() === '') {
+    return res.status(400).json({ error: 'Comment text cannot be empty' });
+  }
+
+  // 首先检查评论是否存在以及用户是否有权限更新
+  db.get(`SELECT * FROM comments WHERE id = ?`, [id], (err, comment) => {
+    if (err) {
+      console.error('Error fetching comment for update:', err);
+      return res.status(500).json({ error: err.message });
+    }
+
+    if (!comment) {
+      return res.status(404).json({ error: 'Comment not found' });
+    }
+
+    // 检查权限：用户只能更新自己的评论
+    if (!comment.user_id || comment.user_id !== req.userId) {
+      return res.status(403).json({ error: 'You can only update your own comments' });
+    }
+
+    // 检查评论是否可编辑
+    if (comment.is_editable !== 1) {
+      return res.status(400).json({ error: 'This comment is not editable' });
+    }
+
+    db.run(`UPDATE comments SET text = ?, is_editable = 0 WHERE id = ?`, [text.trim(), id], function(err) {
+      if (err) {
+        console.error('Error updating comment:', err);
+        return res.status(500).json({ error: err.message });
+      }
+
+      if (this.changes === 0) {
+        return res.status(404).json({ error: 'Comment not found' });
+      }
+
+      // 获取更新后的完整评论对象
+      db.get(`SELECT * FROM comments WHERE id = ?`, [id], (err, row) => {
+        if (err) {
+          console.error('Error fetching updated comment:', err);
+          return res.status(500).json({ error: err.message });
+        }
+
+        if (!row) {
+          return res.status(404).json({ error: 'Comment not found' });
+        }
+
+        // 返回与Remark42兼容的格式
+        const updatedComment = {
+          id: row.id.toString(),
+          pid: row.pid ? row.pid.toString() : null,
+          text: row.text,
+          user: {
+            id: row.user_id ? `user_${row.user_id}` : `anonymous_${row.username}`,
+            name: row.user_id ? req.username : row.username,
+            picture: '',
+            profile: '',
+            verified: false
+          },
+          score: row.score || 0,
+          time: new Date(row.time).toISOString(),
+          edit: {
+            edited: true,
+            reason: '',
+            time: new Date().toISOString()
+          },
+          vote: 0,
+          controversy: 0,
+          deletable: row.user_id === req.userId || req.userId,
+          editable: false  // 已编辑的评论不再可编辑
+        };
+
+        res.status(200).json(updatedComment);
+      });
+    });
+  });
+});
+
+// API: Delete a comment
+app.delete('/api/comments/:id', (req, res) => {
+  const { id } = req.params;
+
+  // 首先检查评论是否存在以及用户是否有权限删除
+  db.get(`SELECT * FROM comments WHERE id = ?`, [id], (err, comment) => {
+    if (err) {
+      console.error('Error fetching comment for deletion:', err);
+      return res.status(500).json({ error: err.message });
+    }
+
+    if (!comment) {
+      return res.status(404).json({ error: 'Comment not found' });
+    }
+
+    // 检查权限：用户只能删除自己的评论
+    if (!comment.user_id || comment.user_id !== req.userId) {
+      return res.status(403).json({ error: 'You can only delete your own comments' });
+    }
+
+    db.run(`UPDATE comments SET is_deleted = 1 WHERE id = ?`, [id], function(err) {
+      if (err) {
+        console.error('Error deleting comment:', err);
+        return res.status(500).json({ error: err.message });
+      }
+
+      if (this.changes === 0) {
+        return res.status(404).json({ error: 'Comment not found' });
+      }
+
+      res.status(204).send(); // No content
+    });
+  });
+});
+
+// API: Vote on a comment (like/dislike)
+app.post('/api/comments/:id/vote', (req, res) => {
+  const { id } = req.params;
+  const { vote } = req.body; // 1 for upvote, -1 for downvote
+
+  if (vote !== 1 && vote !== -1) {
+    return res.status(400).json({ error: 'Vote must be either 1 (upvote) or -1 (downvote)' });
+  }
+
+  // 检查评论是否存在
+  db.get(`SELECT * FROM comments WHERE id = ?`, [id], (err, comment) => {
+    if (err) {
+      console.error('Error fetching comment for voting:', err);
+      return res.status(500).json({ error: err.message });
+    }
+
+    if (!comment) {
+      return res.status(404).json({ error: 'Comment not found' });
+    }
+
+    // 获取当前投票信息
+    let votes = {};
+    try {
+      votes = JSON.parse(comment.votes || '{}');
+    } catch (e) {
+      console.error('Error parsing votes JSON:', e);
+      votes = {};
+    }
+
+    // 检查当前用户是否已投票
+    const currentUserId = req.userId ? `user_${req.userId}` : `anonymous_${req.ip || 'unknown'}`;
+    const previousVote = votes[currentUserId];
+
+    // 如果是相同的投票，则取消投票
+    if (previousVote === vote) {
+      delete votes[currentUserId];
+      vote = 0; // 用于计算分数变化
+    } else {
+      votes[currentUserId] = vote;
+    }
+
+    // 根据投票更新分数
+    let scoreChange = 0;
+    if (vote !== 0) {
+      // 如果是新投票或改变投票
+      if (previousVote && previousVote !== vote) {
+        // 改变投票，先撤销之前的投票
+        scoreChange = -previousVote + vote;
+      } else if (!previousVote) {
+        // 新投票
+        scoreChange = vote;
+      }
+    } else {
+      // 取消投票
+      scoreChange = -previousVote;
+    }
+
+    // 更新评论的分数和投票数据
+    db.run(
+      `UPDATE comments SET score = score + ?, votes = ? WHERE id = ?`,
+      [scoreChange, JSON.stringify(votes), id],
+      function(err) {
+        if (err) {
+          console.error('Error updating comment vote:', err);
+          return res.status(500).json({ error: err.message });
+        }
+
+        if (this.changes === 0) {
+          return res.status(404).json({ error: 'Comment not found' });
+        }
+
+        // 获取更新后的评论信息
+        db.get(`SELECT score FROM comments WHERE id = ?`, [id], (err, updatedComment) => {
+          if (err) {
+            console.error('Error fetching updated comment score:', err);
+            return res.status(500).json({ error: err.message });
+          }
+
+          res.json({
+            success: true,
+            score: updatedComment.score,
+            vote: vote !== 0 ? vote : (previousVote ? 0 : vote) // 返回当前投票状态
+          });
+        });
+      }
+    );
   });
 });
 
