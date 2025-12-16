@@ -510,10 +510,10 @@ document.addEventListener('DOMContentLoaded', () => {
         messageElement.appendChild(contentContainer);
         messageElement.appendChild(footer);
 
-        // Add a container for comments, visible by default
+        // Add a container for comments, hidden by default (will be shown if there are comments)
         const commentsContainer = document.createElement('div');
         commentsContainer.id = `comments-for-${message.id}`;
-        commentsContainer.className = 'mt-4 pt-4 border-t border-gray-800';
+        commentsContainer.className = 'mt-4 pt-4 border-t border-gray-800 hidden';
         messageElement.appendChild(commentsContainer);
 
         return messageElement;
@@ -910,11 +910,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (commentsContainer) {
                 // Check if comments are already loaded
                 if (commentsContainer.dataset.loaded === 'true') {
-                    // Comments are loaded, toggle the comment form visibility
-                    const commentForm = commentsContainer.querySelector('form');
-                    if (commentForm) {
-                        commentForm.classList.toggle('hidden');
-                    }
+                    // Comments are loaded, toggle the entire comment container visibility
+                    commentsContainer.classList.toggle('hidden');
                 } else {
                     // Comments not loaded yet, load them
                     loadCommentsForMessage(id);
@@ -1332,15 +1329,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             const { comments, pagination } = data;
 
-            // Mark as loaded
+            // Mark as loaded and store comments data
             commentsContainer.dataset.loaded = 'true';
+            commentsContainer.dataset.comments = JSON.stringify(comments);
 
             // Render the full comment section structure
             renderCommentSection(commentsContainer, messageId, comments, pagination);
 
-            // Show or hide the message's Reply button based on whether there are comments
+            // Show or hide the message's Reply button and comment container based on whether there are comments
             if (comments.length > 0) {
                 hideMessageReplyButton(messageId);
+                // Show the entire comment container when there are comments
+                commentsContainer.classList.remove('hidden');
                 // Ensure comment form is visible when there are comments
                 const commentForm = commentsContainer.querySelector('form');
                 if (commentForm) {
@@ -1348,11 +1348,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } else {
                 showMessageReplyButton(messageId);
-                // Hide comment form when there are no comments
-                const commentForm = commentsContainer.querySelector('form');
-                if (commentForm) {
-                    commentForm.classList.add('hidden');
-                }
+                // Hide the entire comment container when there are no comments
+                commentsContainer.classList.add('hidden');
+                // Comment form is already visible (no hidden class), but container is hidden
             }
 
         } catch (error) {
@@ -1370,10 +1368,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (comments.length === 0) {
             commentsListContainer.innerHTML = '<p class="text-gray-500 text-center">No comments yet.</p>';
 
-            // If no comments, add the form at the top but hidden by default
+            // If no comments, add the form at the top (visible when container is shown)
             // 2. Comment Form
             const commentForm = document.createElement('form');
-            commentForm.className = 'flex flex-col gap-4 mb-8 hidden';
+            commentForm.className = 'flex flex-col gap-4 mb-8';
             commentForm.innerHTML = `
                 <textarea
                     class="w-full p-4 bg-black border border-gray-800 rounded-lg focus:ring-2 focus:ring-gray-100 focus:outline-none transition-shadow text-gray-400 placeholder:text-gray-600"
