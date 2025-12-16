@@ -272,6 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 检查文件类型以决定如何显示
             const isImage = message.image_mime_type && message.image_mime_type.startsWith('image/');
+            const isVideo = message.image_mime_type && message.image_mime_type.startsWith('video/');
 
             if (isImage) {
                 // 显示图片预览
@@ -327,6 +328,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 fileContainer.appendChild(img);
                 fileContainer.appendChild(imageInfo);
+            } else if (isVideo) {
+                // 显示视频播放器
+                let videoUrl = `/uploads/${message.image_filename}`;
+                // 如果是私有消息，添加 private key 作为查询参数
+                if (message.is_private === 1 && message.private_key) {
+                    videoUrl += `?privateKey=${encodeURIComponent(message.private_key)}`;
+                }
+
+                const video = document.createElement('video');
+                video.src = videoUrl;
+                video.controls = true;
+                video.className = 'max-w-full rounded-lg border border-gray-800';
+                video.innerHTML = 'Your browser does not support the video tag.';
+                
+                // 添加视频信息
+                const videoInfo = document.createElement('div');
+                videoInfo.className = 'text-xs text-gray-500 mt-1';
+                let infoText = 'Video';
+                if (message.image_size) {
+                    infoText += ` • ${(message.image_size / 1024 / 1024).toFixed(2)} MB`;
+                }
+                if (message.image_mime_type) {
+                    infoText += ` • ${message.image_mime_type}`;
+                }
+                videoInfo.textContent = infoText;
+
+                fileContainer.appendChild(video);
+                fileContainer.appendChild(videoInfo);
             } else {
                 // 显示文件下载链接
                 const fileCard = document.createElement('div');
