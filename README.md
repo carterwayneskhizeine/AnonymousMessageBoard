@@ -1,6 +1,6 @@
 # Anonymous Message Board
 
-A simple, anonymous message board web application built with Node.js, Express, EJS, and SQLite3, containerized using Docker and Docker Compose. This application features a pure dark mode interface, support for Markdown content, and allows users to post, edit, and delete messages anonymously.
+A feature-rich anonymous message board web application built with Node.js, Express, EJS, and SQLite3, containerized using Docker and Docker Compose. This application features a pure dark mode interface, support for Markdown content, file uploads, a comment system with infinite nesting, user authentication, Google-style pagination, and allows users to post, edit, and delete messages anonymously.
 
 ![Preview of the Application](PreviewImage.jpg)
 
@@ -152,6 +152,40 @@ Once the Docker containers are up and running, open your web browser and navigat
 *   **Edit File Messages**:
     - Messages containing files cannot be edited (to maintain one-file-per-message constraint)
     - To modify a file message, delete it and create a new one
+
+### Comment System
+
+*   **Post a Comment**:
+    1. Scroll down to the comments section below the messages.
+    2. Type your comment in the text area.
+    3. Click "Post Comment" to submit.
+    *Note: Comments support Markdown formatting and can be posted anonymously or while logged in.*
+
+*   **Reply to a Comment**:
+    1. Click the "Reply" button on any comment.
+    2. A reply text area will appear below the comment.
+    3. Type your reply and click "Post Reply".
+    *Note: Replies can be nested infinitely, allowing deep conversation threads.*
+
+*   **Edit Your Comment**:
+    - Click the "Edit" button on your own comment.
+    - Modify the text and click "Save".
+    *Note: Comments can only be edited within a short time window after posting (configurable).*
+
+*   **Delete Your Comment**:
+    - Click the "Delete" button on your own comment.
+    - Confirm deletion to remove the comment.
+    *Note: Deleted comments are marked as deleted but may remain visible depending on settings.*
+
+*   **Vote on Comments**:
+    - Use the upvote (▲) and downvote (▼) buttons to express your opinion.
+    - Each user can vote once per comment.
+    - The comment score is displayed as the sum of votes.
+
+*   **View Comment Threads**:
+    - Comments are displayed in a nested tree structure.
+    - Click on a comment to expand/collapse its replies.
+    - Use pagination to navigate through large comment sections.
 
 #### User-Specific Features
 *   **Automatic Private Message Access**: Once logged in, all your private messages are automatically displayed without needing to enter KEYs.
