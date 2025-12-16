@@ -179,9 +179,10 @@ function createCommentsTable() {
     time DATETIME DEFAULT CURRENT_TIMESTAMP,  -- 评论时间
     is_deleted INTEGER DEFAULT 0,  -- 是否删除
     is_editable INTEGER DEFAULT 1,  -- 是否可编辑
-    locator_url TEXT NOT NULL DEFAULT '',  -- 关联的页面URL
+    message_id INTEGER,  -- 关联的消息ID
     upvotes INTEGER DEFAULT 0,  -- 赞同票数
-    downvotes INTEGER DEFAULT 0  -- 反对票数
+    downvotes INTEGER DEFAULT 0,  -- 反对票数
+    FOREIGN KEY(message_id) REFERENCES messages(id)
   )`, (err) => {
     if (err) {
       console.error('Error creating comments table:', err.message);
@@ -208,7 +209,7 @@ function createDatabaseIndexes() {
     { sql: `CREATE INDEX IF NOT EXISTS idx_comments_time ON comments(time DESC)`, name: 'idx_comments_time' },
     { sql: `CREATE INDEX IF NOT EXISTS idx_comments_pid ON comments(pid)`, name: 'idx_comments_pid' },
     { sql: `CREATE INDEX IF NOT EXISTS idx_comments_user_id ON comments(user_id)`, name: 'idx_comments_user_id' },
-    { sql: `CREATE INDEX IF NOT EXISTS idx_comments_locator_url ON comments(locator_url)`, name: 'idx_comments_locator_url' }
+    { sql: `CREATE INDEX IF NOT EXISTS idx_comments_message_id ON comments(message_id)`, name: 'idx_comments_message_id' }
   ];
 
   let completed = 0;
@@ -763,23 +764,23 @@ app.put('/api/messages/:id', (req, res) => {
 
 // ==================== Comments API ====================
 
-// API: Get comments for a specific URL
+// API: Get comments for a specific message
 app.get('/api/comments', (req, res) => {
-  const { url, sort = '-time', page = 1, limit = 50 } = req.query;
+  const { messageId, sort = '-time', page = 1, limit = 50 } = req.query;
   const pageNum = parseInt(page);
   const limitNum = parseInt(limit);
   const offset = (pageNum - 1) * limitNum;
 
-  if (!url) {
-    return res.status(400).json({ error: 'URL parameter is required' });
+  if (!messageId) {
+    return res.status(400).json({ error: 'messageId parameter is required' });
   }
 
   // 构建基础查询 - 只获取未删除的评论（不包括回复，回复会单独查询）
   let baseSql = `SELECT c.*, u.username as user_username
                  FROM comments c
                  LEFT JOIN users u ON c.user_id = u.id
-                 WHERE c.locator_url = ? AND c.is_deleted = 0 AND c.pid IS NULL`;  // 只查询顶级评论
-  let params = [url];
+                 WHERE c.message_id = ? AND c.is_deleted = 0 AND c.pid IS NULL`;  // 只查询顶级评论
+  let params = [messageId];
 
   // 根据排序参数添加ORDER BY子句
   let orderBy = '';
@@ -801,13 +802,13 @@ app.get('/api/comments', (req, res) => {
   }
 
   // 查询总数（只统计顶级评论）
-  const countSql = `SELECT COUNT(*) as total FROM comments WHERE locator_url = ? AND is_deleted = 0 AND pid IS NULL`;
+  const countSql = `SELECT COUNT(*) as total FROM comments WHERE message_id = ? AND is_deleted = 0 AND pid IS NULL`;
 
   // 查询分页数据，并包含用户信息
   const dataSql = `${baseSql} ${orderBy} LIMIT ? OFFSET ?`;
 
   // 执行总数查询
-  db.get(countSql, [url], (err, countResult) => {
+  db.get(countSql, [messageId], (err, countResult) => {
     if (err) {
       console.error('Error counting comments:', err);
       return res.status(500).json({ error: err.message });
@@ -933,7 +934,7 @@ app.get('/api/comments', (req, res) => {
             res.json({
               comments: comments,
               info: {
-                url: url,
+                messageId: messageId,
                 count: total,
                 first_time: comments.length > 0 ? comments[comments.length - 1].time : null,
                 last_time: comments.length > 0 ? comments[0].time : null,
@@ -958,7 +959,7 @@ app.get('/api/comments', (req, res) => {
         res.json({
           comments: comments,
           info: {
-            url: url,
+            messageId: messageId,
             count: total,
             first_time: null,
             last_time: null,
@@ -980,15 +981,15 @@ app.get('/api/comments', (req, res) => {
 
 // API: Post a new comment
 app.post('/api/comments', (req, res) => {
-  const { pid = null, text, url } = req.body;
+  const { pid = null, text, messageId } = req.body;
 
   // 验证必需参数
   if (!text || text.trim() === '') {
     return res.status(400).json({ error: 'Comment text is required' });
   }
 
-  if (!url) {
-    return res.status(400).json({ error: 'URL is required' });
+  if (!messageId) {
+    return res.status(400).json({ error: 'messageId is required' });
   }
 
   // 检查父评论是否存在（如果提供了pid）
@@ -1017,8 +1018,8 @@ app.post('/api/comments', (req, res) => {
       ? req.username
       : `anonymous_${Math.random().toString(36).substring(2, 10)}`;  // 生成匿名用户名
 
-    db.run(`INSERT INTO comments (pid, user_id, username, text, locator_url) VALUES (?, ?, ?, ?, ?)`,
-      [pid, userId, username, text.trim(), url], function(err) {
+    db.run(`INSERT INTO comments (pid, user_id, username, text, message_id) VALUES (?, ?, ?, ?, ?)`,
+      [pid, userId, username, text.trim(), messageId], function(err) {
         if (err) {
           console.error('Error inserting comment:', err);
           return res.status(500).json({ error: err.message });
@@ -1092,7 +1093,7 @@ app.put('/api/comments/:id', (req, res) => {
       return res.status(400).json({ error: 'This comment is not editable' });
     }
 
-    db.run(`UPDATE comments SET text = ?, is_editable = 0 WHERE id = ?`, [text.trim(), id], function(err) {
+    db.run(`UPDATE comments SET text = ? WHERE id = ?`, [text.trim(), id], function(err) {
       if (err) {
         console.error('Error updating comment:', err);
         return res.status(500).json({ error: err.message });
@@ -1135,7 +1136,7 @@ app.put('/api/comments/:id', (req, res) => {
           vote: 0,
           controversy: 0,
           deletable: row.user_id === req.userId || req.userId,
-          editable: false  // 已编辑的评论不再可编辑
+          editable: row.user_id === req.userId && row.is_editable === 1
         };
 
         res.status(200).json(updatedComment);
