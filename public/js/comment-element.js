@@ -30,7 +30,13 @@ export const createCommentElement = (comment, messageId, depth = 0) => {
 
     // Comment text
     const textElement = document.createElement('div');
-    textElement.className = 'mb-3 text-gray-300';
+    if (depth === 0) {
+        // Apply Tailwind's typography styles for top-level comments for proper markdown rendering
+        textElement.className = 'prose prose-invert max-w-none text-gray-200 mb-3';
+    } else {
+        // For nested comments, use a simpler style
+        textElement.className = 'mb-3 text-gray-300';
+    }
     // Use global converter from main.js
     textElement.innerHTML = converter.makeHtml(comment.text);
 
