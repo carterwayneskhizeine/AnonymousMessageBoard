@@ -900,73 +900,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const handleMessageClick = (e) => {
-        const button = e.target.closest('button');
-        if (!button) return;
-
-        const {
-            action,
-            id
-        } = button.dataset;
-        if (!action || !id) return;
-
-        if (action === 'delete') {
-            if (confirm('Are you sure you want to delete this message?')) {
-                window.deleteMessage(id);
-            }
-        } else if (action === 'edit') {
-            // Hide comments when entering edit mode, similar to the reply button behavior
-            const commentsContainer = document.getElementById(`comments-for-${id}`);
-            if (commentsContainer) {
-                commentsContainer.classList.add('hidden');
-            }
-            toggleEditView(id);
-        } else if (action === 'save') {
-            window.saveMessage(id);
-        } else if (action === 'cancel') {
-            const originalMessage = messages.find(m => m.id == id);
-            if (originalMessage) {
-                const messageElement = document.querySelector(`[data-message-id='${id}']`);
-                const restoredElement = renderMessage(originalMessage);
-
-                // Replace the old element with the new one
-                messageElement.replaceWith(restoredElement);
-
-                // Load comments for the message (comments are visible by default)
-                window.loadCommentsForMessage(id);
-            }
-        } else if (action === 'copy') {
-            const messageToCopy = messages.find(m => m.id == id);
-            if (messageToCopy && navigator.clipboard) {
-                navigator.clipboard.writeText(messageToCopy.content)
-                    .then(() => {
-                        const originalHTML = button.innerHTML;
-                        button.textContent = 'Copied!';
-                        setTimeout(() => {
-                            button.innerHTML = originalHTML;
-                        }, 1500);
-                    })
-                    .catch(err => {
-                        console.error('Failed to copy message: ', err);
-                        alert('Failed to copy message.');
-                    });
-            } else {
-                alert('Clipboard API not supported or message not found.');
-            }
-        } else if (action === 'reply') {
-            const commentsContainer = document.getElementById(`comments-for-${id}`);
-            if (commentsContainer) {
-                // Check if comments are already loaded
-                if (commentsContainer.dataset.loaded === 'true') {
-                    // Comments are loaded, toggle the entire comment container visibility
-                    commentsContainer.classList.toggle('hidden');
-                } else {
-                    // Comments not loaded yet, load them
-                    window.loadCommentsForMessage(id);
-                }
-            }
-        }
-    };
+    // handleMessageClick function is now defined in message-click-handler.js
 
     // Message delete and save functions are now defined in message-operations.js
 

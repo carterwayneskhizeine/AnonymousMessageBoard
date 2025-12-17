@@ -452,6 +452,33 @@ Add an entry to this guide documenting:
 
 ---
 
+### Migration: Message Click Handler
+
+**Status:** ✅ Completed
+**Date:** 2025-12-17
+**Extractor:** `handleMessageClick` function
+
+**Changes:**
+- **Created:** `public/js/message-click-handler.js`
+- **Modified:** `public/js/main.js` (removed lines 903-969, made function globally available)
+- **Modified:** `views/index.ejs` (added script import)
+
+**Load Order:** After `message-operations.js`, before `main.js`
+**Dependencies:**
+- Requires `window.messages` array (defined in main.js)
+- Requires `window.deleteMessage` function (defined in message-operations.js)
+- Requires `window.saveMessage` function (defined in message-operations.js)
+- Requires `window.toggleEditView` function (defined in message-edit-toggle.js)
+- Requires `window.renderMessage` function (defined in main.js)
+- Requires `window.loadCommentsForMessage` function (defined in comment-loader.js)
+- Requires `window.handleReply` function (defined in reply-handler.js)
+- Error handling: Logs console errors for missing dependencies
+
+**Global Exposures:**
+- `window.handleMessageClick`
+
+---
+
 ## Future Considerations
 
 - Consider using a module bundler (Webpack, Rollup) for complex projects
