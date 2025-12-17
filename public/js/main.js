@@ -74,6 +74,26 @@ document.addEventListener('DOMContentLoaded', () => {
     window.registerError = registerError;
     window.registerFromLoginBtn = registerFromLoginBtn;
 
+    // Make DOM elements globally available for initial-setup.js
+    window.messageForm = messageForm;
+    window.messageList = messageList;
+    window.keyButton = keyButton;
+    window.privateKeyInput = privateKeyInput;
+    window.sendKeyButton = sendKeyButton;
+    window.postMessageButton = postMessageButton;
+    window.uploadFileButton = uploadFileButton;
+    window.fileUpload = fileUpload;
+    window.removeFileButton = removeFileButton;
+    window.errorMessage = errorMessage;
+    window.messageTypeModal = messageTypeModal;
+    window.publicOption = publicOption;
+    window.privateOption = privateOption;
+    window.typeSelection = typeSelection;
+    window.privateKeyEntry = privateKeyEntry;
+    window.modalPrivateKey = modalPrivateKey;
+    window.cancelPrivate = cancelPrivate;
+    window.confirmPrivate = confirmPrivate;
+
     // --- Global State and Instances ---
     let messages = [];
     let currentUser = null;
@@ -589,7 +609,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Make fetchAndRenderMessages globally available for auth-handlers.js
+    // Make fetchAndRenderMessages globally available for auth-handslers.js
     window.fetchAndRenderMessages = fetchAndRenderMessages;
 
     // --- Pagination Functions ---
@@ -1051,100 +1071,16 @@ document.addEventListener('DOMContentLoaded', () => {
         editInput.focus();
     };
 
+    // Make additional functions globally available for initial-setup.js (after all functions are defined)
+    window.handlePostSubmit = handlePostSubmit;
+    window.handleMessageClick = handleMessageClick;
+    window.updateFilePreview = updateFilePreview;
+    window.clearSelectedFile = clearSelectedFile;
+    window.postMessageToAPI = postMessageToAPI;
+    window.parseURLParams = parseURLParams;
+
     // --- Initial Setup ---
-    messageForm.addEventListener('submit', handlePostSubmit);
-    messageList.addEventListener('click', handleMessageClick);
-
-    // 文件上传事件监听器
-    uploadFileButton.addEventListener('click', () => {
-        fileUpload.click();
-    });
-
-    fileUpload.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        // 检查文件大小 (50MB)
-        if (file.size > 50 * 1024 * 1024) {
-            alert('File is too large. Maximum size is 50MB.');
-            fileUpload.value = '';
-            return;
-        }
-
-        updateFilePreview(file);
-    });
-
-    removeFileButton.addEventListener('click', clearSelectedFile);
-
-    // KEY 按钮事件监听器
-    keyButton.addEventListener('click', (e) => {
-        e.preventDefault();
-        const isShowingKeyInput = !privateKeyInput.classList.contains('hidden');
-
-        if (isShowingKeyInput) {
-            // 隐藏 KEY 输入框和 Send 按钮，显示 Post Message 按钮和文件上传按钮
-            privateKeyInput.classList.add('hidden');
-            sendKeyButton.classList.add('hidden');
-            postMessageButton.classList.remove('hidden');
-            uploadFileButton.classList.remove('hidden');
-            privateKeyInput.value = '';
-            // 隐藏错误提示
-            errorMessage.classList.add('hidden');
-            fetchAndRenderMessages(); // 重新加载（只显示 public）
-        } else {
-            // 显示 KEY 输入框和 Send 按钮，隐藏 Post Message 按钮和文件上传按钮
-            privateKeyInput.classList.remove('hidden');
-            sendKeyButton.classList.remove('hidden');
-            postMessageButton.classList.add('hidden');
-            uploadFileButton.classList.add('hidden');
-            privateKeyInput.focus();
-        }
-    });
-
-    // 监听 KEY 输入框的回车键
-    privateKeyInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            fetchAndRenderMessages();
-        }
-    });
-
-    // Send 按钮点击事件
-    sendKeyButton.addEventListener('click', () => {
-        fetchAndRenderMessages();
-    });
-
-    // 模态框按钮事件监听器
-    publicOption.addEventListener('click', async () => {
-        const content = messageTypeModal.dataset.pendingContent;
-        messageTypeModal.close();
-        await postMessageToAPI(content, false, null);
-    });
-
-    privateOption.addEventListener('click', () => {
-        typeSelection.classList.add('hidden');
-        privateKeyEntry.classList.remove('hidden');
-        modalPrivateKey.focus();
-    });
-
-    cancelPrivate.addEventListener('click', () => {
-        typeSelection.classList.remove('hidden');
-        privateKeyEntry.classList.add('hidden');
-        modalPrivateKey.value = '';
-    });
-
-    confirmPrivate.addEventListener('click', async () => {
-        const privateKey = modalPrivateKey.value.trim();
-
-        // 所有私有消息都需要KEY
-        if (!privateKey) {
-            alert('KEY cannot be empty!');
-            return;
-        }
-
-        const content = messageTypeModal.dataset.pendingContent;
-        messageTypeModal.close();
-        await postMessageToAPI(content, true, privateKey);
-    });
+    // Initial Setup is now defined in initial-setup.js
 
     // Authentication Event Handlers are now defined in auth-handlers.js
 
@@ -1176,6 +1112,13 @@ document.addEventListener('DOMContentLoaded', () => {
         window.initAuthHandlers();
     } else {
         console.error('initAuthHandlers function not found');
+    }
+
+    // Initialize event listeners
+    if (window.initEventListeners) {
+        window.initEventListeners();
+    } else {
+        console.error('initEventListeners function not found');
     }
 
     // Comment styles are now initialized in comment-styles.js

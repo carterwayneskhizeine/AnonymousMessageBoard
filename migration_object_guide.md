@@ -381,6 +381,30 @@ Add an entry to this guide documenting:
 
 ---
 
+### Migration: Initial Setup Event Listeners
+
+**Status:** ✅ Completed
+**Date:** 2025-12-17
+**Extractor:** `initEventListeners` function (event listener setup)
+
+**Changes:**
+- **Created:** `public/js/initial-setup.js`
+- **Modified:** `public/js/main.js` (removed lines 1054-1147, made elements and functions global)
+- **Modified:** `views/index.ejs` (added script import)
+
+**Load Order:** After `main.js` (last in main modules, before comment modules)
+**Dependencies:**
+- Requires all DOM elements to be available globally (defined in main.js)
+- Requires multiple functions: `handlePostSubmit`, `handleMessageClick`, `updateFilePreview`, `clearSelectedFile`, `postMessageToAPI`
+- Requires `fetchAndRenderMessages` function (defined in main.js)
+- Self-dependent: Requires many DOM elements and functions from main.js
+- Comprehensive dependency checking with console error logging for missing dependencies
+
+**Global Exposures:**
+- `window.initEventListeners`
+
+---
+
 ## Future Considerations
 
 - Consider using a module bundler (Webpack, Rollup) for complex projects
