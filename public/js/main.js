@@ -1654,25 +1654,7 @@ window.handlePostComment = async (messageId, parentId, inputElement, errorElemen
         }
     };
 
-    const hideMessageReplyButton = (messageId) => {
-        const messageElement = document.querySelector(`[data-message-id='${messageId}']`);
-        if (!messageElement) return;
-
-        const replyButton = messageElement.querySelector('button[data-action="reply"]');
-        if (replyButton) {
-            replyButton.classList.add('hidden');
-        }
-    };
-
-    const showMessageReplyButton = (messageId) => {
-        const messageElement = document.querySelector(`[data-message-id='${messageId}']`);
-        if (!messageElement) return;
-
-        const replyButton = messageElement.querySelector('button[data-action="reply"]');
-        if (replyButton) {
-            replyButton.classList.remove('hidden');
-        }
-    };
+    // hideMessageReplyButton and showMessageReplyButton functions are now defined in message-reply-button.js
 
     // handleReply function is now defined in reply-handler.js
     

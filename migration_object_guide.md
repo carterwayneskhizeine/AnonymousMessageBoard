@@ -133,6 +133,25 @@ Add an entry to this guide documenting:
 
 ---
 
+### Migration: Message Reply Button Functions
+
+**Status:** ✅ Completed
+**Date:** 2025-12-17
+**Extractor:** `hideMessageReplyButton` and `showMessageReplyButton` functions
+
+**Changes:**
+- **Created:** `public/js/message-reply-button.js`
+- **Modified:** `public/js/main.js` (removed lines 1657-1665 and 1667-1675)
+- **Modified:** `views/index.ejs` (added script import)
+
+**Load Order:** After `comment-styles.js`, before `main.js`
+**Dependencies:** None (self-contained)
+**Global Exposures:**
+- `window.hideMessageReplyButton`
+- `window.showMessageReplyButton`
+
+---
+
 ## Best Practices
 
 ### ✅ Do:
