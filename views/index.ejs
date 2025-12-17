@@ -124,48 +124,6 @@
         <!-- Pagination Controls (will be injected by JavaScript) -->
         <div id="pagination-container"></div>
 
-<% /* %>
-        <!-- Comments Section -->
-        <section id="comments-section" class="mt-12 pt-8 border-t border-gray-800">
-            <h2 class="text-2xl font-bold mb-6 text-gray-100">Comments</h2>
-
-            <!-- Comment Form -->
-            <div class="mb-8">
-                <form id="comment-form" class="flex flex-col gap-4">
-                    <textarea
-                        id="comment-input"
-                        class="w-full p-4 bg-black border border-gray-800 rounded-lg focus:ring-2 focus:ring-gray-100 focus:outline-none transition-shadow text-gray-400 placeholder:text-gray-600"
-                        rows="3"
-                        placeholder="Add your comment..."></textarea>
-
-                    <div class="flex justify-between items-center">
-                        <div id="comment-user-info" class="text-sm text-gray-500">
-                            <% if (user) { %>
-                                Commenting as: <span class="text-gray-300"><%= user.username %></span>
-                            <% } else { %>
-                                Commenting as: <span class="text-gray-300">Anonymous</span>
-                            <% } %>
-                        </div>
-
-                        <button type="submit" id="post-comment-button" class="border border-gray-700 hover:border-gray-100 text-gray-400 hover:text-gray-100 font-bold py-2 px-4 rounded-lg transition-colors">
-                            Post Comment
-                        </button>
-                    </div>
-
-                    <div id="comment-error-message" class="hidden text-red-400 text-center font-bold p-3 bg-black rounded-lg border border-red-800" role="alert"></div>
-                </form>
-            </div>
-
-            <!-- Comments List -->
-            <div id="comments-container">
-                <!-- Comments will be dynamically injected here by JavaScript -->
-            </div>
-
-            <!-- Comments Pagination (will be injected by JavaScript) -->
-            <div id="comments-pagination-container"></div>
-        </section>
-<% */ %>
-
         <!-- 消息类型选择弹窗 -->
         <dialog id="message-type-modal" class="bg-black text-gray-200 p-6 rounded-lg shadow-lg border border-gray-800 backdrop:bg-black backdrop:bg-opacity-75">
             <h2 class="text-xl font-bold mb-4 text-gray-100">Choose Message Type</h2>
@@ -257,6 +215,7 @@
 
     <script src="/js/youtube-extension.js?v=<%= new Date().getTime() %>"></script>
     <script src="/js/file-upload.js?v=<%= new Date().getTime() %>"></script>
+    <script src="/js/event-handlers.js?v=<%= new Date().getTime() %>"></script>
     <script src="/js/auth-handlers.js?v=<%= new Date().getTime() %>"></script>
     <script src="/js/comment-styles.js?v=<%= new Date().getTime() %>"></script>
     <script src="/js/message-reply-button.js?v=<%= new Date().getTime() %>"></script>

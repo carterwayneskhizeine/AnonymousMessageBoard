@@ -130,6 +130,14 @@ document.addEventListener('DOMContentLoaded', () => {
         configurable: true
     });
 
+    // Make selectedFile globally available as a getter/setter to maintain reference
+    Object.defineProperty(window, 'selectedFile', {
+        get: function() { return selectedFile; },
+        set: function(value) { selectedFile = value; },
+        enumerable: true,
+        configurable: true
+    });
+
     // --- Helper Functions ---
     const createButton = (text, id, action) => {
         const icons = {
@@ -769,68 +777,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- Event Handlers ---
-    let isSubmitting = false; // Prevent duplicate submissions
-
-    const handlePostSubmit = async (e) => {
-        e.preventDefault();
-
-        // Prevent duplicate submissions
-        if (isSubmitting) {
-            return;
-        }
-
-        isSubmitting = true;
-
-        try {
-            const content = messageInput.value.trim();
-
-            // 验证：消息必须有内容或文件
-            if (!content && !selectedFile) {
-                alert('Message must have either text content or a file');
-                return;
-            }
-
-            // 如果有文件，先上传文件
-            let fileData = null;
-            if (selectedFile && selectedFile.file) {
-                fileStatus.textContent = 'Uploading file...';
-                postMessageButton.disabled = true; // Disable the button during upload
-                postMessageButton.classList.add('opacity-50', 'cursor-not-allowed');
-
-                fileData = await uploadFile(selectedFile.file);
-                selectedFile.uploadedData = fileData;
-                fileStatus.textContent = 'File uploaded';
-            }
-
-            // 存储消息内容和文件数据，稍后发送
-            messageTypeModal.dataset.pendingContent = content;
-            if (fileData) {
-                messageTypeModal.dataset.fileData = JSON.stringify(fileData);
-            } else {
-                delete messageTypeModal.dataset.fileData;
-            }
-
-            // 重置模态框状态
-            typeSelection.classList.remove('hidden');
-            privateKeyEntry.classList.add('hidden');
-            modalPrivateKey.value = '';
-
-            // 显示模态框
-            messageTypeModal.showModal();
-        } catch (error) {
-            console.error('Error in message submission:', error);
-            alert(`Error: ${error.message}`);
-            // 恢复文件状态
-            if (selectedFile) {
-                fileStatus.textContent = 'File selected';
-            }
-        } finally {
-            isSubmitting = false;
-            postMessageButton.disabled = false; // Re-enable the button
-            postMessageButton.classList.remove('opacity-50', 'cursor-not-allowed');
-        }
-    };
+    // handlePostSubmit is now defined in event-handlers.js
 
     // postMessageToAPI function is now defined in message-post-api.js
 
@@ -841,7 +788,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // toggleEditView is now defined in message-edit-toggle.js
     // Make additional functions globally available for initial-setup.js (after all functions are defined)
-    window.handlePostSubmit = handlePostSubmit;
     window.handleMessageClick = handleMessageClick;
     window.updateFilePreview = updateFilePreview;
     window.clearSelectedFile = clearSelectedFile;

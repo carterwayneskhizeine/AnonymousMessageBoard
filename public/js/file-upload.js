@@ -62,3 +62,6 @@ const uploadFile = async (file) => {
         xhr.send(formData);
     });
 };
+
+// Make function globally available
+window.uploadFile = uploadFile;

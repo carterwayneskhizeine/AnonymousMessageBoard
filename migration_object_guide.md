@@ -97,6 +97,9 @@ Add an entry to this guide documenting:
 - **Modified:** `views/index.ejs` (added script import)
 
 **Load Order:** After `youtube-extension.js`, before `main.js`
+**Dependencies:** None (self-contained)
+**Global Exposures:**
+- `window.uploadFile`
 
 ---
 
@@ -508,6 +511,29 @@ Add an entry to this guide documenting:
 
 **Global Exposures:**
 - `window.postMessageToAPI`
+
+---
+
+### Migration: Event Handlers
+
+**Status:** ✅ Completed
+**Date:** 2025-12-17
+**Extractor:** `handlePostSubmit` function
+
+**Changes:**
+- **Created:** `public/js/event-handlers.js`
+- **Modified:** `public/js/main.js` (removed lines 772-833, made selectedFile globally available)
+- **Modified:** `views/index.ejs` (added script import)
+
+**Load Order:** After `file-upload.js`, before `auth-handlers.js`
+**Dependencies:**
+- Requires `window.uploadFile` function (defined in file-upload.js)
+- Requires multiple DOM elements: `window.messageInput`, `window.fileStatus`, `window.postMessageButton`, `window.messageTypeModal`, etc.
+- Requires `window.selectedFile` object (defined in main.js, made globally accessible)
+- Fallback: Provides error messages for missing dependencies
+
+**Global Exposures:**
+- `window.handlePostSubmit`
 
 ---
 
