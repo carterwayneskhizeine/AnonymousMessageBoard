@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { getAIResponse } = require('../utils/ai-handler');
 
 /**
  * @description 评论相关的路由
@@ -256,10 +257,13 @@ module.exports = function(db) {
             console.error('Error inserting comment:', err);
             return res.status(500).json({ error: err.message });
           }
+          
+          const newCommentId = this.lastID;
 
-          db.get(`SELECT * FROM comments WHERE id = ?`, [this.lastID], (err, row) => {
+          db.get(`SELECT * FROM comments WHERE id = ?`, [newCommentId], (err, row) => {
             if (err) {
               console.error('Error fetching inserted comment:', err);
+              // We can't form a proper response, so we error out.
               return res.status(500).json({ error: err.message });
             }
 
@@ -287,7 +291,44 @@ module.exports = function(db) {
               editable: (row.user_id === req.userId && row.is_editable === 1) || req.isAdmin
             };
 
+            // Respond to the user immediately so they don't have to wait for the AI.
             res.status(201).json(comment);
+
+            // --- AI Trigger Logic (Asynchronous) ---
+            if (row.text && row.text.toLowerCase().includes('@goldierill')) {
+              console.log(`[AI Trigger] Mention detected in comment ID: ${newCommentId}.`);
+              
+              // 1. Fetch the original message content for context.
+              db.get('SELECT content FROM messages WHERE id = ?', [messageId], async (err, messageRow) => {
+                if (err) {
+                  console.error(`[AI Error] Could not fetch parent message (ID: ${messageId}) for context:`, err);
+                  return;
+                }
+                if (!messageRow) {
+                  console.error(`[AI Error] Parent message (ID: ${messageId}) not found for AI context.`);
+                  return;
+                }
+
+                // 2. Call the AI handler to get a response.
+                console.log(`[AI] Getting response for comment: "${row.text}"`);
+                const aiResponseText = await getAIResponse(messageRow.content, row.text);
+
+                if (aiResponseText) {
+                  console.log(`[AI] Received response. Saving to DB as reply to comment ${newCommentId}.`);
+                  // 3. Save the AI's response as a new comment, replying to the triggering comment.
+                  db.run(`INSERT INTO comments (pid, user_id, username, text, message_id) VALUES (?, ?, ?, ?, ?)`,
+                    [newCommentId, null, 'GoldieRill', aiResponseText, messageId], function(err) {
+                      if (err) {
+                        console.error('[AI Error] Failed to insert AI comment into database:', err);
+                      } else {
+                        console.log(`[AI Success] AI comment saved with ID: ${this.lastID}.`);
+                      }
+                    });
+                } else {
+                  console.log('[AI] Handler returned no response. Not saving comment.');
+                }
+              });
+            }
           });
         });
     }

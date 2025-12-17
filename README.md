@@ -1,6 +1,6 @@
 # Anonymous Message Board
 
-A feature-rich anonymous message board web application built with Node.js, Express, and EJS. It uses SQLite3 for data storage and is fully containerized with Docker. The frontend is built with **modern, modular JavaScript (ESM)**, and the application features a pure dark mode interface, support for Markdown content, file uploads (including video playback), a comment system with infinite nesting, user authentication, Google-style pagination, YouTube video embedding, and allows users to post, edit, and delete messages anonymously.
+A feature-rich anonymous message board web application built with Node.js, Express, and EJS. It uses SQLite3 for data storage and is fully containerized with Docker. The frontend is built with **modern, modular JavaScript (ESM)**, and the application features a pure dark mode interface, support for Markdown content, file uploads (including video playback), a comment system with infinite nesting, **AI-powered responses to specific mentions**, user authentication, Google-style pagination, YouTube video embedding, and allows users to post, edit, and delete messages anonymously.
 
 ![Preview of the Application](PreviewImage.jpg)
 
@@ -22,6 +22,7 @@ A feature-rich anonymous message board web application built with Node.js, Expre
 *   **Database Performance Optimization**: Built-in indexes for faster queries, better scalability for research and learning.
 *   **Responsive Design**: The application is designed to be accessible and usable across various devices, with mobile-friendly buttons.
 *   **Dockerized Deployment**: Easy setup and deployment using Docker and Docker Compose.
+*   **AI-Powered Comment Responses**: Users can mention `@goldierill` in comments to receive AI-generated replies based on the message context.
 
 ## Tech Stack
 
@@ -683,22 +684,30 @@ The following modifications were made to optimize database query performance wit
 - Better scalability for research and learning purposes
 
 #### Comment System Feature
-The following modifications were made to implement the comment system with infinite nesting support:
+The following modifications were made to implement the comment system with infinite nesting support, including AI-powered responses:
 
-1. **`src/index.js`**:
-   - Added `comments` table with `id`, `pid` (parent ID), `user_id`, `username`, `text`, `score`, `votes`, `time`, `is_deleted`, `is_editable`, `locator_url` (page URL), `upvotes`, `downvotes` columns
-   - Added database indexes for comments table:
-     - `idx_comments_time` - Optimizes comment listing by time (DESC order)
-     - `idx_comments_pid` - Optimizes finding comment replies by parent ID
-     - `idx_comments_user_id` - Optimizes finding comments by user
-     - `idx_comments_locator_url` - Optimizes finding comments by page URL
-   - Added API endpoints for comment management:
-     - `GET /api/comments` - Retrieves comments for a specific page URL with pagination and nested replies
-     - `POST /api/comments` - Creates new comments or replies to existing comments
-     - `PUT /api/comments/:id` - Edits user's own comments
-     - `DELETE /api/comments/:id` - Deletes user's own comments
-     - `POST /api/comments/:id/vote` - Upvotes/downvotes comments
-   - Implemented recursive function to fetch nested replies with unlimited depth
+1. **`package.json`**:
+   - Added new dependencies: `axios` for HTTP requests to LiteLLM, and `dotenv` for loading environment variables.
+
+2. **`docker-compose.yml`**:
+   - Added `env_file` directive to load variables from `.env` into the `message-board` service.
+
+3. **`.env`**:
+   - New file to store `LITE_LLM_API_KEY`, `LITE_LLM_URL`, and `LITE_LLM_MODEL` for the AI service.
+
+4. **`src/index.js`**:
+   - Added `require('dotenv').config();` at the top to load environment variables.
+
+5. **`src/utils/ai-handler.js`**:
+   - New module containing `getAIResponse` function to interact with the LiteLLM API. It constructs prompts based on message and comment content and sends requests.
+
+6. **`src/routes/comments.js`**:
+   - Modified `POST /api/comments` route to:
+     - Import `getAIResponse` from `../../utils/ai-handler.js`.
+     - After successfully saving a user's comment, asynchronously check if the comment text contains `@goldierill`.
+     - If triggered, fetch the original message content from the database.
+     - Call `getAIResponse` with the message and comment content.
+     - If an AI response is received, insert it as a new comment from 'GoldieRill', replying to the triggering comment.
 
 2. **`views/index.ejs`**:
    - Added comments section below messages section
