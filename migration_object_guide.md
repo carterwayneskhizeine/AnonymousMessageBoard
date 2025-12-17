@@ -173,6 +173,27 @@ Add an entry to this guide documenting:
 
 ---
 
+### Migration: Comment Post Handler
+
+**Status:** ✅ Completed
+**Date:** 2025-12-17
+**Extractor:** `handlePostComment` function
+
+**Changes:**
+- **Created:** `public/js/comment-post.js`
+- **Modified:** `public/js/main.js` (removed lines 1532-1569)
+- **Modified:** `views/index.ejs` (added script import)
+
+**Load Order:** After `main.js` (immediately after main.js)
+**Dependencies:**
+- Requires `window.loadCommentsForMessage` function (defined in main.js)
+- Fallback: page reload if dependency not available
+
+**Global Exposures:**
+- `window.handlePostComment`
+
+---
+
 ### Migration: Comment Vote Handler
 
 **Status:** ✅ Completed
@@ -184,7 +205,7 @@ Add an entry to this guide documenting:
 - **Modified:** `public/js/main.js` (removed lines 1571-1583, updated function call)
 - **Modified:** `views/index.ejs` (added script import)
 
-**Load Order:** After `main.js` (between main.js and comment-edit.js)
+**Load Order:** After `comment-post.js`, before `comment-edit.js`
 **Dependencies:**
 - Requires `window.loadCommentsForMessage` function (defined in main.js)
 - Fallback: page reload if dependency not available
