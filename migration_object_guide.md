@@ -152,6 +152,27 @@ Add an entry to this guide documenting:
 
 ---
 
+### Migration: Comment Delete Handler
+
+**Status:** ✅ Completed
+**Date:** 2025-12-17
+**Extractor:** `handleDeleteComment` function
+
+**Changes:**
+- **Created:** `public/js/comment-delete.js`
+- **Modified:** `public/js/main.js` (removed lines 1639-1655, made loadCommentsForMessage global)
+- **Modified:** `views/index.ejs` (added script import)
+
+**Load Order:** After `main.js`, before `reply-handler.js`
+**Dependencies:**
+- Requires `window.loadCommentsForMessage` function (defined in main.js)
+- Fallback: page reload if dependency not available
+
+**Global Exposures:**
+- `window.handleDeleteComment`
+
+---
+
 ## Best Practices
 
 ### ✅ Do:

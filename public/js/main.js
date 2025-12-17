@@ -1339,6 +1339,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // Make loadCommentsForMessage globally available for modules that need it
+    window.loadCommentsForMessage = loadCommentsForMessage;
+
     const renderCommentSection = (container, messageId, comments, pagination) => {
         container.innerHTML = ''; // Clear previous content
 
@@ -1427,7 +1430,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (action === 'edit') {
                 handleEditComment(commentId, messageId, commentsListContainer);
             } else if (action === 'delete') {
-                handleDeleteComment(commentId, messageId);
+                window.handleDeleteComment(commentId, messageId);
             } else if (action === 'reply') {
                 handleReply(commentId, messageId, button.closest('[data-comment-id]'));
             }
@@ -1636,23 +1639,7 @@ window.handlePostComment = async (messageId, parentId, inputElement, errorElemen
         });
     };
 
-    const handleDeleteComment = async (commentId, messageId) => {
-        if (!confirm('Are you sure?')) return;
-        try {
-            const response = await fetch(`/api/comments/${commentId}`, { method: 'DELETE' });
-            if (!response.ok) throw new Error('Failed to delete comment');
-
-            // Refresh comments
-            const commentsContainer = document.getElementById(`comments-for-${messageId}`);
-            if (commentsContainer) {
-                // Clear loaded flag to force reload
-                delete commentsContainer.dataset.loaded;
-            }
-            loadCommentsForMessage(messageId, 1, true); // Refresh
-        } catch (error) {
-            console.error('Delete error:', error);
-        }
-    };
+    // handleDeleteComment function is now defined in comment-delete.js
 
     // hideMessageReplyButton and showMessageReplyButton functions are now defined in message-reply-button.js
 
