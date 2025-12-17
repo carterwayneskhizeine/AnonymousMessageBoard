@@ -529,7 +529,7 @@ document.addEventListener('DOMContentLoaded', () => {
             messages.forEach(message => {
                 messageList.appendChild(renderMessage(message));
                 // 自动加载评论
-                loadCommentsForMessage(message.id);
+                window.loadCommentsForMessage(message.id);
             });
 
             // 渲染分页控件
@@ -808,7 +808,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         messageList.appendChild(renderMessage(message));
                     });
                     // 为新消息加载评论以显示正确的Reply按钮状态
-                    loadCommentsForMessage(newMessage.id);
+                    window.loadCommentsForMessage(newMessage.id);
                 } else if (currentUser) {
                     // 如果用户已登录且发送私有消息，立即显示（因为用户可以看到自己的私有消息）
                     messages.unshift(newMessage);
@@ -817,7 +817,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         messageList.appendChild(renderMessage(message));
                     });
                     // 为新消息加载评论以显示正确的Reply按钮状态
-                    loadCommentsForMessage(newMessage.id);
+                    window.loadCommentsForMessage(newMessage.id);
                 }
                 // 未登录用户发送的私有消息不显示
 
@@ -871,7 +871,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 messageElement.replaceWith(restoredElement);
 
                 // Load comments for the message (comments are visible by default)
-                loadCommentsForMessage(id);
+                window.loadCommentsForMessage(id);
             }
         } else if (action === 'copy') {
             const messageToCopy = messages.find(m => m.id == id);
@@ -900,7 +900,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     commentsContainer.classList.toggle('hidden');
                 } else {
                     // Comments not loaded yet, load them
-                    loadCommentsForMessage(id);
+                    window.loadCommentsForMessage(id);
                 }
             }
         }
@@ -968,7 +968,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 messageElement.replaceWith(newMessageElement);
 
                 // Load comments for the updated message (comments are visible by default)
-                loadCommentsForMessage(id);
+                window.loadCommentsForMessage(id);
             } else {
                 throw new Error('Failed to save message.');
             }
@@ -1294,63 +1294,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // ==================== Per-Message Comments Functionality ====================
-
-    const loadCommentsForMessage = async (messageId, page = 1, forceRefresh = false) => {
-        const commentsContainer = document.getElementById(`comments-for-${messageId}`);
-        if (!commentsContainer) return;
-
-        // Avoid reloading if already loaded, unless forcing a refresh
-        if (commentsContainer.dataset.loaded === 'true' && !forceRefresh) {
-            return;
-        }
-
-        const commentsPerPage = 10;
-        try {
-            const response = await fetch(`/api/comments?messageId=${messageId}&page=${page}&limit=${commentsPerPage}`);
-            if (!response.ok) {
-                throw new Error(`Failed to fetch comments: ${response.status}`);
-            }
-
-            const data = await response.json();
-            const { comments, pagination } = data;
-
-            // Mark as loaded and store comments data
-            commentsContainer.dataset.loaded = 'true';
-            commentsContainer.dataset.comments = JSON.stringify(comments);
-
-            // Render the full comment section structure
-            if (window.renderCommentSection) {
-                window.renderCommentSection(commentsContainer, messageId, comments, pagination);
-            } else {
-                console.error('renderCommentSection function not found');
-            }
-
-            // Show or hide the message's Reply button and comment container based on whether there are comments
-            if (comments.length > 0) {
-                hideMessageReplyButton(messageId);
-                // Show the entire comment container when there are comments
-                commentsContainer.classList.remove('hidden');
-                // Ensure comment form is visible when there are comments
-                const commentForm = commentsContainer.querySelector('form');
-                if (commentForm) {
-                    commentForm.classList.remove('hidden');
-                }
-            } else {
-                showMessageReplyButton(messageId);
-                // Hide the entire comment container when there are no comments
-                commentsContainer.classList.add('hidden');
-                // Comment form is already visible (no hidden class), but container is hidden
-            }
-
-        } catch (error) {
-            console.error(`Error loading comments for message ${messageId}:`, error);
-            commentsContainer.innerHTML = `<p class="text-red-500 text-center">Could not load comments.</p>`;
-        }
-    };
-
-    // Make loadCommentsForMessage globally available for modules that need it
-    window.loadCommentsForMessage = loadCommentsForMessage;
+    // loadCommentsForMessage function is now defined in comment-loader.js
 
     // renderCommentSection function is now defined in comment-section-renderer.js
     

@@ -203,6 +203,28 @@ Add an entry to this guide documenting:
 
 ---
 
+### Migration: Comment Loader
+
+**Status:** ✅ Completed
+**Date:** 2025-12-17
+**Extractor:** `loadCommentsForMessage` function
+
+**Changes:**
+- **Created:** `public/js/comment-loader.js`
+- **Modified:** `public/js/main.js` (removed lines 1297-1350, updated function calls)
+- **Modified:** `views/index.ejs` (added script import)
+
+**Load Order:** After `main.js` (immediately after main.js)
+**Dependencies:**
+- Requires `window.renderCommentSection` function (defined in comment-section-renderer.js)
+- Requires `window.hideMessageReplyButton` and `window.showMessageReplyButton` functions (defined in message-reply-button.js)
+- Fallback: Provides basic error messages if dependencies not available
+
+**Global Exposures:**
+- `window.loadCommentsForMessage`
+
+---
+
 ### Migration: Comment Element Creator
 
 **Status:** ✅ Completed
@@ -214,7 +236,7 @@ Add an entry to this guide documenting:
 - **Modified:** `public/js/main.js` (removed lines 1443-1530, made converter global)
 - **Modified:** `views/index.ejs` (added script import)
 
-**Load Order:** After `main.js` (immediately after main.js)
+**Load Order:** After `comment-post.js`, before `comment-vote.js`
 **Dependencies:**
 - Requires `window.createButton` function (defined in main.js)
 - Requires `window.converter` instance (defined in main.js)
