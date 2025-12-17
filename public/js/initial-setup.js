@@ -20,7 +20,8 @@ import {
 } from './ui-elements.js';
 import {
     isPrivateFilterMode,
-    setIsPrivateFilterMode
+    setIsPrivateFilterMode,
+    setCurrentPrivateKey
 } from './state.js';
 
 import {
@@ -29,6 +30,9 @@ import {
 import {
     fetchAndRenderMessages
 } from './api-rendering-logic.js';
+import {
+    updateURL
+} from './pagination.js';
 import {
     handlePostSubmit,
     postMessageToAPI
@@ -80,6 +84,7 @@ export const initEventListeners = () => {
             // 如果当前处于私有过滤模式，退出私有过滤模式
             if (isPrivateFilterMode) {
                 setIsPrivateFilterMode(false);
+                setCurrentPrivateKey('');
             }
 
             // 隐藏 KEY 输入框和 Send 按钮，显示 Post Message 按钮和文件上传按钮
@@ -90,6 +95,7 @@ export const initEventListeners = () => {
             privateKeyInput.value = '';
             // 隐藏错误提示
             errorMessage.classList.add('hidden');
+            updateURL(); // 更新 URL，移除 key 参数
             fetchAndRenderMessages(); // 重新加载（只显示 public）
         } else {
             // 显示 KEY 输入框和 Send 按钮，隐藏 Post Message 按钮和文件上传按钮
@@ -116,6 +122,7 @@ export const initEventListeners = () => {
         const key = privateKeyInput.value.trim();
         if (key) {
             setIsPrivateFilterMode(true);
+            updateURL(); // 更新 URL，添加 key 参数
             fetchAndRenderMessages();
         }
     }

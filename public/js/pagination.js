@@ -2,12 +2,16 @@ import {
     currentPage,
     totalPages,
     currentPrivateKey,
+    isPrivateFilterMode,
     setCurrentPage,
-    setCurrentPrivateKey
+    setCurrentPrivateKey,
+    setIsPrivateFilterMode
 } from './state.js';
 import {
     privateKeyInput,
-    sendKeyButton
+    sendKeyButton,
+    postMessageButton,
+    uploadFileButton
 } from './ui-elements.js';
 import {
     fetchAndRenderMessages
@@ -148,5 +152,10 @@ export const parseURLParams = () => {
         privateKeyInput.value = key;
         privateKeyInput.classList.remove('hidden');
         sendKeyButton.classList.remove('hidden');
+        // 隐藏 Post Message 按钮和文件上传按钮
+        postMessageButton.classList.add('hidden');
+        uploadFileButton.classList.add('hidden');
+        // 自动进入私有过滤模式
+        setIsPrivateFilterMode(true);
     }
 };
