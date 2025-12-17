@@ -4,12 +4,13 @@ const fs = require('fs');
 const sqlite3 = require('sqlite3').verbose();
 const session = require('express-session');
 const SQLiteStore = require('connect-sqlite3')(session);
-const multer = require('multer');
-
 // 导入工具函数
 const { hashPassword, comparePassword } = require('./utils/password');
 const initializeDatabase = require('./database/init');
 const cleanupOrphanedFiles = require('./database/cleanup');
+
+// 导入中间件
+const { upload, generalUpload, uploadsDir } = require('./middleware/upload');
 
 const app = express();
 const port = 1989;
@@ -22,55 +23,6 @@ app.use((req, res, next) => {
 });
 
 
-// File upload configuration
-const uploadsDir = path.resolve(__dirname, '..', 'data', 'uploads');
-
-// Ensure uploads directory exists
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-// Multer storage configuration
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir);
-  },
-  filename: (req, file, cb) => {
-    // Generate unique filename: timestamp_random_originalname
-    const timestamp = Date.now();
-    const random = Math.random().toString(36).substring(2, 15);
-    const originalName = file.originalname.replace(/[^a-zA-Z0-9.]/g, '_');
-    const filename = `${timestamp}_${random}_${originalName}`;
-    cb(null, filename);
-  }
-});
-
-// File filter for any type of files (with size and extension checks elsewhere if needed)
-const fileFilter = (req, file, cb) => {
-  // Accept all files for now - we'll handle validation in the actual upload endpoint
-  cb(null, true);
-};
-
-// Multer upload instance
-const upload = multer({
-  storage: storage,
-  fileFilter: fileFilter,
-  limits: {
-    fileSize: 50 * 1024 * 1024, // 50MB limit
-    files: 1, // Only one file per request
-    fieldSize: 50 * 1024 * 1024 // Increase field size limit for large files
-  }
-});
-
-// Additional multer instance for files without filtering for the new general upload endpoint
-const generalUpload = multer({
-  storage: storage,
-  limits: {
-    fileSize: 50 * 1024 * 1024, // 50MB limit
-    files: 1, // Only one file per request
-    fieldSize: 50 * 1024 * 1024 // Increase field size limit for large files
-  }
-});
 
 // The database file will be created in the /app/data directory inside the container
 const dbPath = path.resolve(__dirname, '..', 'data', 'messages.db');
