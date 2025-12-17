@@ -352,6 +352,35 @@ Add an entry to this guide documenting:
 3. Test the specific functionality that was extracted
 4. Revert changes if necessary and re-evaluate extraction approach
 
+---
+
+### Migration: Authentication Handlers
+
+**Status:** ✅ Completed
+**Date:** 2025-12-17
+**Extractor:** Authentication Event Handlers module
+
+**Changes:**
+- **Created:** `public/js/auth-handlers.js`
+- **Modified:** `public/js/main.js` (removed lines 1118-1295, made functions globally available)
+- **Modified:** `views/index.ejs` (added script import)
+
+**Load Order:** After `file-upload.js`, before `comment-styles.js`
+**Dependencies:**
+- Requires `window.updateUIForUser` function (defined in main.js)
+- Requires `window.fetchAndRenderMessages` function (defined in main.js)
+- Requires `window.showError` function (defined in main.js)
+- Requires `window.clearError` function (defined in main.js)
+- Requires `window.checkAuthStatus` function (defined in main.js)
+- Requires authentication DOM elements (defined in main.js)
+- Fallback: Uses page reload if dependencies not available
+
+**Global Exposures:**
+- `window.initAuthHandlers`
+- Authentication DOM elements: `loginBtn`, `registerBtn`, `logoutBtn`, etc.
+
+---
+
 ## Future Considerations
 
 - Consider using a module bundler (Webpack, Rollup) for complex projects

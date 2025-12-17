@@ -52,6 +52,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const registerError = document.getElementById('register-error');
     const registerFromLoginBtn = document.getElementById('register-from-login');
 
+    // Make authentication DOM elements globally available for auth-handlers.js
+    window.loginBtn = loginBtn;
+    window.registerBtn = registerBtn;
+    window.logoutBtn = logoutBtn;
+    window.guestView = guestView;
+    window.userView = userView;
+    window.usernameDisplay = usernameDisplay;
+    window.loginModal = loginModal;
+    window.registerModal = registerModal;
+    window.loginForm = loginForm;
+    window.registerForm = registerForm;
+    window.loginUsername = loginUsername;
+    window.loginPassword = loginPassword;
+    window.registerUsername = registerUsername;
+    window.registerPassword = registerPassword;
+    window.registerConfirmPassword = registerConfirmPassword;
+    window.cancelLogin = cancelLogin;
+    window.cancelRegister = cancelRegister;
+    window.loginError = loginError;
+    window.registerError = registerError;
+    window.registerFromLoginBtn = registerFromLoginBtn;
+
     // --- Global State and Instances ---
     let messages = [];
     let currentUser = null;
@@ -144,6 +166,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return null;
     };
+
+    // Make authentication helper functions globally available for auth-handlers.js
+    window.updateUIForUser = updateUIForUser;
+    window.showError = showError;
+    window.clearError = clearError;
+    window.checkAuthStatus = checkAuthStatus;
 
     // --- File Upload Helper Functions ---
     // uploadFile function is now defined in file-upload.js
@@ -560,6 +588,9 @@ document.addEventListener('DOMContentLoaded', () => {
             errorMessage.classList.add('hidden');
         }
     };
+
+    // Make fetchAndRenderMessages globally available for auth-handlers.js
+    window.fetchAndRenderMessages = fetchAndRenderMessages;
 
     // --- Pagination Functions ---
     const renderPagination = () => {
@@ -1115,184 +1146,7 @@ document.addEventListener('DOMContentLoaded', () => {
         await postMessageToAPI(content, true, privateKey);
     });
 
-    // --- Authentication Event Handlers ---
-    // Login button
-    loginBtn.addEventListener('click', () => {
-        clearError(loginError);
-        loginUsername.value = '';
-        loginPassword.value = '';
-        loginModal.showModal();
-    });
-
-    // Register from login button (in login modal)
-    registerFromLoginBtn.addEventListener('click', () => {
-        // Close login modal
-        loginModal.close();
-        // Clear any errors
-        clearError(registerError);
-        // Clear form fields
-        registerUsername.value = '';
-        registerPassword.value = '';
-        registerConfirmPassword.value = '';
-        // Show register modal
-        registerModal.showModal();
-    });
-
-    // Logout button
-    logoutBtn.addEventListener('click', async () => {
-        try {
-            const response = await fetch('/api/auth/logout', {
-                method: 'POST'
-            });
-
-            if (response.ok) {
-                updateUIForUser(null);
-                fetchAndRenderMessages(); // 重新加载消息（不再显示私有消息）
-            } else {
-                const errorData = await response.json();
-                alert(`登出失败: ${errorData.error || '未知错误'}`);
-            }
-        } catch (error) {
-            console.error('Logout error:', error);
-            alert('登出失败，请重试');
-        }
-    });
-
-    // Login form submission
-    loginForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        clearError(loginError);
-
-        const username = loginUsername.value.trim();
-        const password = loginPassword.value.trim();
-
-        if (!username || !password) {
-            showError(loginError, 'Username and password cannot be empty');
-            return;
-        }
-
-        try {
-            const response = await fetch('/api/auth/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    username,
-                    password
-                })
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                loginModal.close();
-                updateUIForUser(data.user);
-                fetchAndRenderMessages(); // 重新加载消息（显示用户的私有消息）
-            } else {
-                showError(loginError, data.error || 'Login failed');
-            }
-        } catch (error) {
-            console.error('Login error:', error);
-            showError(loginError, 'Network error, please try again');
-        }
-    });
-
-    // Register form submission
-    registerForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        clearError(registerError);
-
-        const username = registerUsername.value.trim();
-        const password = registerPassword.value.trim();
-        const confirmPassword = registerConfirmPassword.value.trim();
-
-        if (!username || !password || !confirmPassword) {
-            showError(registerError, 'All fields are required');
-            return;
-        }
-
-        if (password !== confirmPassword) {
-            showError(registerError, 'Passwords do not match');
-            return;
-        }
-
-        if (username.length < 3 || username.length > 20) {
-            showError(registerError, 'Username must be between 3-20 characters');
-            return;
-        }
-
-        if (password.length < 6) {
-            showError(registerError, 'Password must be at least 6 characters');
-            return;
-        }
-
-        try {
-            const response = await fetch('/api/auth/register', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    username,
-                    password
-                })
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                registerModal.close();
-                // Clear login form errors
-                clearError(loginError);
-                loginUsername.value = '';
-                loginPassword.value = '';
-                updateUIForUser(data.user);
-                fetchAndRenderMessages(); // 重新加载消息
-            } else {
-                showError(registerError, data.error || 'Registration failed');
-            }
-        } catch (error) {
-            console.error('Register error:', error);
-            showError(registerError, 'Network error, please try again');
-        }
-    });
-
-    // Cancel login
-    cancelLogin.addEventListener('click', () => {
-        loginModal.close();
-    });
-
-    // Cancel register
-    cancelRegister.addEventListener('click', () => {
-        registerModal.close();
-        // Clear login form errors and show login modal
-        clearError(loginError);
-        loginModal.showModal();
-    });
-
-    // Close modals when clicking outside
-    loginModal.addEventListener('click', (e) => {
-        if (e.target === loginModal) {
-            loginModal.close();
-        }
-    });
-
-    registerModal.addEventListener('click', (e) => {
-        if (e.target === registerModal) {
-            registerModal.close();
-            // Clear login form errors and show login modal
-            clearError(loginError);
-            loginModal.showModal();
-        }
-    });
-
-    // Check authentication status on page load
-    checkAuthStatus().then(user => {
-        if (user) {
-            console.log('User is logged in:', user.username);
-        }
-    });
+    // Authentication Event Handlers are now defined in auth-handlers.js
 
     // loadCommentsForMessage function is now defined in comment-loader.js
 
@@ -1316,6 +1170,13 @@ document.addEventListener('DOMContentLoaded', () => {
     parseURLParams();
 
     fetchAndRenderMessages();
+
+    // Initialize authentication handlers
+    if (window.initAuthHandlers) {
+        window.initAuthHandlers();
+    } else {
+        console.error('initAuthHandlers function not found');
+    }
 
     // Comment styles are now initialized in comment-styles.js
 });
