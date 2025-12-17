@@ -42,14 +42,8 @@ export const createCommentElement = (comment, messageId, parentId, commentMap) =
         commentText = `${mentionLink} ${comment.text}`;
     }
 
-
-    if (!parentId) {
-        // Apply Tailwind's typography styles for top-level comments for proper markdown rendering
-        textElement.className = 'prose prose-invert max-w-none text-gray-200 mb-3';
-    } else {
-        // For replies, use a simpler style but ensure the @-mention link is styled correctly
-        textElement.className = 'mb-3 text-gray-300';
-    }
+    // Apply Tailwind's typography styles for ALL comments for proper markdown rendering
+    textElement.className = 'prose prose-invert max-w-none text-gray-200 mb-3';
     // Use global converter from main.js to render markdown
     textElement.innerHTML = converter.makeHtml(commentText);
 
