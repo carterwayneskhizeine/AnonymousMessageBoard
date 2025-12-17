@@ -192,28 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.createButton = createButton;
 
     // --- Authentication Helper Functions ---
-    const updateUIForUser = (user) => {
-        if (user) {
-            currentUser = user;
-            guestView.classList.add('hidden');
-            userView.classList.remove('hidden');
-            usernameDisplay.textContent = user.username;
-
-            // 如果用户已登录，隐藏KEY输入框（因为会自动显示私有消息）
-            if (privateKeyInput.classList.contains('hidden')) {
-                // KEY输入框已隐藏，不需要操作
-            } else {
-                // 如果KEY输入框显示，隐藏它并重新加载消息
-                privateKeyInput.classList.add('hidden');
-                sendKeyButton.classList.add('hidden');
-                fetchAndRenderMessages();
-            }
-        } else {
-            currentUser = null;
-            guestView.classList.remove('hidden');
-            userView.classList.add('hidden');
-        }
-    };
+    // updateUIForUser function is now defined in auth-ui-helper.js
 
     const showError = (element, message) => {
         element.textContent = message;
@@ -239,8 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return null;
     };
 
-    // Make authentication helper functions globally available for auth-handlers.js
-    window.updateUIForUser = updateUIForUser;
+    // updateUIForUser is now globally available from auth-ui-helper.js
     window.showError = showError;
     window.clearError = clearError;
     window.checkAuthStatus = checkAuthStatus;

@@ -642,6 +642,30 @@ Add an entry to this guide documenting:
 
 ---
 
+### Migration: Authentication UI Helper
+
+**Status:** ✅ Completed
+**Date:** 2025-12-17
+**Extractor:** `updateUIForUser` function
+
+**Changes:**
+- **Created:** `public/js/auth-ui-helper.js`
+- **Modified:** `public/js/main.js` (removed lines 194-216, updated function reference)
+- **Modified:** `views/index.ejs` (added script import)
+
+**Load Order:** Before `auth-handlers.js`
+**Dependencies:**
+- Requires `window.currentUser` object (defined in main.js)
+- Requires DOM elements: `guestView`, `userView`, `usernameDisplay`, `privateKeyInput`, `sendKeyButton` (defined in main.js)
+- Requires `window.fetchAndRenderMessages` function (defined in api-rendering-logic.js)
+- Required by `window.initAuthHandlers` function (defined in auth-handlers.js) and main.js
+- Error handling: Provides console error logging and fallback to page reload for critical errors
+
+**Global Exposures:**
+- `window.updateUIForUser`
+
+---
+
 ## Future Considerations
 
 - Consider using a module bundler (Webpack, Rollup) for complex projects
