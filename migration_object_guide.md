@@ -173,6 +173,28 @@ Add an entry to this guide documenting:
 
 ---
 
+### Migration: Comment Edit Handler
+
+**Status:** ✅ Completed
+**Date:** 2025-12-17
+**Extractor:** `handleEditComment` function
+
+**Changes:**
+- **Created:** `public/js/comment-edit.js`
+- **Modified:** `public/js/main.js` (removed lines 1582-1640, made createButton global)
+- **Modified:** `views/index.ejs` (added script import)
+
+**Load Order:** After `main.js`, before `comment-delete.js`
+**Dependencies:**
+- Requires `window.createButton` function (defined in main.js)
+- Requires `window.loadCommentsForMessage` function (defined in main.js)
+- Fallback: Uses basic buttons if createButton not available, page reload if loadCommentsForMessage not available
+
+**Global Exposures:**
+- `window.handleEditComment`
+
+---
+
 ## Best Practices
 
 ### ✅ Do:

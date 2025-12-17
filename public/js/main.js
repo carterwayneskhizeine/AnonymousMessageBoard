@@ -91,6 +91,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return button;
     };
 
+    // Make createButton globally available for modules that need it
+    window.createButton = createButton;
+
     // --- Authentication Helper Functions ---
     const updateUIForUser = (user) => {
         if (user) {
@@ -1428,7 +1431,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const vote = button.dataset.vote === 'up' ? 1 : -1;
                 handleVote(commentId, vote, messageId);
             } else if (action === 'edit') {
-                handleEditComment(commentId, messageId, commentsListContainer);
+                window.handleEditComment(commentId, messageId, commentsListContainer);
             } else if (action === 'delete') {
                 window.handleDeleteComment(commentId, messageId);
             } else if (action === 'reply') {
@@ -1579,65 +1582,7 @@ window.handlePostComment = async (messageId, parentId, inputElement, errorElemen
         }
     };
 
-    const handleEditComment = (commentId, messageId, container) => {
-        const commentElement = container.querySelector(`[data-comment-id='${commentId}']`);
-        const textElement = commentElement.querySelector('.text-gray-300');
-        // This is a simplified version. A full implementation would require fetching the raw markdown.
-        const currentText = textElement.textContent;
-
-        const editForm = document.createElement('form');
-        editForm.className = 'mt-2';
-
-        // Create textarea
-        const textarea = document.createElement('textarea');
-        textarea.className = 'w-full p-2 bg-black border border-gray-800 rounded';
-        textarea.value = currentText;
-        editForm.appendChild(textarea);
-
-        // Create button container
-        const buttonContainer = document.createElement('div');
-        buttonContainer.className = 'flex justify-end gap-2 mt-2';
-
-        // Create cancel button using createButton function
-        const cancelButton = createButton('Cancel', commentId, 'cancel');
-        cancelButton.type = 'button';
-        cancelButton.classList.remove('p-2'); // Remove default padding
-        cancelButton.classList.add('px-2', 'py-1'); // Add smaller padding
-        cancelButton.addEventListener('click', () => {
-            loadCommentsForMessage(messageId, 1, true);
-        });
-
-        // Create save button using createButton function
-        const saveButton = createButton('Save', commentId, 'save');
-        saveButton.type = 'submit';
-        saveButton.classList.remove('p-2'); // Remove default padding
-        saveButton.classList.add('px-2', 'py-1'); // Add smaller padding
-
-        // Add buttons to container
-        buttonContainer.appendChild(cancelButton);
-        buttonContainer.appendChild(saveButton);
-
-        // Add container to form
-        editForm.appendChild(buttonContainer);
-
-        textElement.replaceWith(editForm);
-
-        editForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const newText = textarea.value;
-            try {
-                const response = await fetch(`/api/comments/${commentId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: newText }),
-                });
-                if (!response.ok) throw new Error('Failed to save comment');
-                loadCommentsForMessage(messageId, 1, true); // Refresh
-            } catch (error) {
-                console.error('Save comment error:', error);
-            }
-        });
-    };
+    // handleEditComment function is now defined in comment-edit.js
 
     // handleDeleteComment function is now defined in comment-delete.js
 
