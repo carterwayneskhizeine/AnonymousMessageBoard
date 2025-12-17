@@ -1429,7 +1429,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (action === 'vote') {
                 const vote = button.dataset.vote === 'up' ? 1 : -1;
-                handleVote(commentId, vote, messageId);
+                window.handleVote(commentId, vote, messageId);
             } else if (action === 'edit') {
                 window.handleEditComment(commentId, messageId, commentsListContainer);
             } else if (action === 'delete') {
@@ -1568,19 +1568,7 @@ window.handlePostComment = async (messageId, parentId, inputElement, errorElemen
         }
     };
 
-    const handleVote = async (commentId, vote, messageId) => {
-        try {
-            const response = await fetch(`/api/comments/${commentId}/vote`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ vote }),
-            });
-            if (!response.ok) throw new Error('Failed to vote');
-            loadCommentsForMessage(messageId, 1, true); // Refresh
-        } catch (error) {
-            console.error('Vote error:', error);
-        }
-    };
+    // handleVote function is now defined in comment-vote.js
 
     // handleEditComment function is now defined in comment-edit.js
 

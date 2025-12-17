@@ -173,6 +173,27 @@ Add an entry to this guide documenting:
 
 ---
 
+### Migration: Comment Vote Handler
+
+**Status:** ✅ Completed
+**Date:** 2025-12-17
+**Extractor:** `handleVote` function
+
+**Changes:**
+- **Created:** `public/js/comment-vote.js`
+- **Modified:** `public/js/main.js` (removed lines 1571-1583, updated function call)
+- **Modified:** `views/index.ejs` (added script import)
+
+**Load Order:** After `main.js` (between main.js and comment-edit.js)
+**Dependencies:**
+- Requires `window.loadCommentsForMessage` function (defined in main.js)
+- Fallback: page reload if dependency not available
+
+**Global Exposures:**
+- `window.handleVote`
+
+---
+
 ### Migration: Comment Edit Handler
 
 **Status:** ✅ Completed
@@ -184,7 +205,7 @@ Add an entry to this guide documenting:
 - **Modified:** `public/js/main.js` (removed lines 1582-1640, made createButton global)
 - **Modified:** `views/index.ejs` (added script import)
 
-**Load Order:** After `main.js`, before `comment-delete.js`
+**Load Order:** After `comment-vote.js`, before `comment-delete.js`
 **Dependencies:**
 - Requires `window.createButton` function (defined in main.js)
 - Requires `window.loadCommentsForMessage` function (defined in main.js)
