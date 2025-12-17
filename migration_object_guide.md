@@ -479,6 +479,38 @@ Add an entry to this guide documenting:
 
 ---
 
+### Migration: Message Post API Handler
+
+**Status:** ✅ Completed
+**Date:** 2025-12-17
+**Extractor:** `postMessageToAPI` function
+
+**Changes:**
+- **Created:** `public/js/message-post-api.js`
+- **Modified:** `public/js/main.js` (removed lines 826-901, made additional elements and variables globally available)
+- **Modified:** `views/index.ejs` (added script import)
+
+**Load Order:** After `message-operations.js`, before `message-click-handler.js`
+**Dependencies:**
+- Requires `window.messages` array (defined in main.js)
+- Requires `window.messageTypeModal` DOM element (defined in main.js)
+- Requires `window.messageList` DOM element (defined in main.js)
+- Requires `window.messageInput` DOM element (defined in main.js)
+- Requires `window.currentUser` object (defined in main.js)
+- Requires `window.renderMessage` function (defined in main.js)
+- Requires `window.clearSelectedFile` function (defined in main.js)
+- Requires `window.loadCommentsForMessage` function (defined in comment-loader.js)
+- Fallback: Provides proper error handling and conditional checks for missing dependencies
+
+**Additional Changes Required in main.js:**
+- Made `window.messageInput` globally available
+- Made `window.currentUser` globally available using Object.defineProperty
+
+**Global Exposures:**
+- `window.postMessageToAPI`
+
+---
+
 ## Future Considerations
 
 - Consider using a module bundler (Webpack, Rollup) for complex projects

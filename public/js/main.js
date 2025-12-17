@@ -93,10 +93,19 @@ document.addEventListener('DOMContentLoaded', () => {
     window.modalPrivateKey = modalPrivateKey;
     window.cancelPrivate = cancelPrivate;
     window.confirmPrivate = confirmPrivate;
+    window.messageInput = messageInput;
 
     // --- Global State and Instances ---
     let messages = [];
     let currentUser = null;
+
+    // Make currentUser globally available for modules that need it
+    Object.defineProperty(window, 'currentUser', {
+        get: function() { return currentUser; },
+        set: function(value) { currentUser = value; },
+        enumerable: true,
+        configurable: true
+    });
     let selectedFile = null; // { file: File, previewUrl: string, uploadedData: object, isImage: boolean }
     let currentPage = 1;
     let totalPages = 1;
@@ -823,82 +832,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // 发送消息到 API
-    const postMessageToAPI = async (content, isPrivate, privateKey) => {
-        try {
-            // 获取文件数据
-            let fileData = null;
-            if (messageTypeModal.dataset.fileData) {
-                try {
-                    fileData = JSON.parse(messageTypeModal.dataset.fileData);
-                } catch (e) {
-                    console.error('Failed to parse file data:', e);
-                }
-            }
-
-            // 构建请求体
-            const requestBody = {
-                content,
-                isPrivate,
-                privateKey
-            };
-
-            // 添加文件信息
-            if (fileData) {
-                requestBody.hasImage = true; // 保持现有字段名以向后兼容
-                requestBody.imageFilename = fileData.filename;
-                requestBody.imageMimeType = fileData.mimeType;
-                requestBody.imageSize = fileData.size;
-            }
-
-            const response = await fetch('/api/messages', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(requestBody),
-            });
-
-            if (response.ok) {
-                const newMessage = await response.json();
-
-                // 如果是 public 消息，立即显示
-                if (!isPrivate) {
-                    messages.unshift(newMessage);
-                    messageList.innerHTML = '';
-                    messages.forEach(message => {
-                        messageList.appendChild(renderMessage(message));
-                    });
-                    // 为新消息加载评论以显示正确的Reply按钮状态
-                    window.loadCommentsForMessage(newMessage.id);
-                } else if (currentUser) {
-                    // 如果用户已登录且发送私有消息，立即显示（因为用户可以看到自己的私有消息）
-                    messages.unshift(newMessage);
-                    messageList.innerHTML = '';
-                    messages.forEach(message => {
-                        messageList.appendChild(renderMessage(message));
-                    });
-                    // 为新消息加载评论以显示正确的Reply按钮状态
-                    window.loadCommentsForMessage(newMessage.id);
-                }
-                // 未登录用户发送的私有消息不显示
-
-                messageInput.value = '';
-                clearSelectedFile(); // 清除文件状态
-
-                // 自动刷新页面以确保所有状态同步
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1000); // 1秒后刷新，让用户看到成功提示
-            } else {
-                const errorData = await response.json();
-                alert(`Error: ${errorData.error || 'Something went wrong'}`);
-            }
-        } catch (error) {
-            console.error('Error submitting message:', error);
-            alert('Failed to post message.');
-        }
-    };
+    // postMessageToAPI function is now defined in message-post-api.js
 
     // handleMessageClick function is now defined in message-click-handler.js
 
