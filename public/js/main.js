@@ -128,9 +128,6 @@ document.addEventListener('DOMContentLoaded', () => {
         window.youtubeExtension.regex &&
         window.youtubeExtension.replace) {
         extensions.push(window.youtubeExtension);
-        console.log('YouTube extension loaded successfully');
-    } else {
-        console.warn('YouTube extension not available or malformed - using standard markdown only');
     }
 
     const converter = new showdown.Converter({
@@ -303,23 +300,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // INITIALIZATION
     // ========================================
 
-    console.log('Initializing application...');
-    console.log('YouTube extension available:', !!window.youtubeExtension);
-
     // Parse URL parameters
     if (window.parseURLParams) {
         window.parseURLParams();
-        console.log('URL parameters parsed successfully');
     } else {
         console.error('parseURLParams function not found');
     }
 
     // Initialize message fetching
     if (window.fetchAndRenderMessages) {
-        console.log('Fetching messages...');
-        window.fetchAndRenderMessages().then(() => {
-            console.log('Messages fetched successfully');
-        }).catch(error => {
+        window.fetchAndRenderMessages().catch(error => {
             console.error('Error fetching messages:', error);
         });
     } else {
@@ -333,7 +323,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize authentication
     if (window.initAuthHandlers) {
         window.initAuthHandlers();
-        console.log('Authentication handlers initialized');
     } else {
         console.error('initAuthHandlers function not found');
     }
@@ -341,7 +330,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize event listeners
     if (window.initEventListeners) {
         window.initEventListeners();
-        console.log('Event listeners initialized');
     } else {
         console.error('initEventListeners function not found');
     }
