@@ -615,6 +615,33 @@ Add an entry to this guide documenting:
 
 ---
 
+### Migration: File Preview Update Function
+
+**Status:** ✅ Completed
+**Date:** 2025-12-17
+**Extractor:** `updateFilePreview` function
+
+**Changes:**
+- **Created:** `public/js/file-preview.js`
+- **Modified:** `public/js/main.js` (removed lines 258-299, updated function reference)
+- **Modified:** `views/index.ejs` (added script import)
+
+**Load Order:** After `file-upload.js`, before `event-handlers.js`
+**Dependencies:**
+- Requires `window.clearSelectedFile` function (defined in main.js)
+- Requires `window.selectedFile` object (defined in main.js)
+- Requires DOM elements: `filePreviewContent`, `filePreviewContainer`, `fileStatus` (defined in main.js)
+- Required by `window.initialSetup` function (defined in initial-setup.js)
+- Error handling: Provides console error logging for missing dependencies
+
+**Additional Changes Required in main.js:**
+- Made `window.fileStatus`, `window.filePreviewContainer`, and `window.filePreviewContent` globally available
+
+**Global Exposures:**
+- `window.updateFilePreview`
+
+---
+
 ## Future Considerations
 
 - Consider using a module bundler (Webpack, Rollup) for complex projects
