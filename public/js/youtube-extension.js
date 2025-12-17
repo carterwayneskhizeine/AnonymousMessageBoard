@@ -12,3 +12,6 @@ const youtubeExtension = {
                 </div>`;
     }
 };
+
+// Make extension globally available for main.js
+window.youtubeExtension = youtubeExtension;
