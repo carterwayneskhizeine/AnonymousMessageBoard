@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const fs = require('fs');
+const { getAIResponse } = require('../utils/ai-handler');
 
 /**
  * @description 消息相关的路由
@@ -18,26 +19,32 @@ module.exports = function(db, uploadsDir) {
     const offset = (pageNum - 1) * limitNum;
 
     // 构建基础查询条件
-    let baseSql = "FROM messages WHERE is_private = 0";
+    let baseSql;
     let params = [];
 
-    // 如果用户已登录，显示用户的私有消息
-    if (req.userId) {
-      baseSql = "FROM messages WHERE is_private = 0 OR (is_private = 1 AND user_id = ?)";
-      params = [req.userId];
-    }
-
-    // 如果提供了 privateKey，则返回 public 消息 + 匹配 KEY 的 private 消息（覆盖用户登录逻辑）
+    // 逻辑调整：privateKey 优先于 userId
     if (privateKey && privateKey.trim() !== '') {
-      baseSql = "FROM messages WHERE is_private = 0 OR (is_private = 1 AND private_key = ?)";
+      baseSql = "FROM messages m WHERE m.is_private = 0 OR (m.is_private = 1 AND m.private_key = ?)";
       params = [privateKey.trim()];
+    } else if (req.userId) {
+      baseSql = "FROM messages m WHERE m.is_private = 0 OR (m.is_private = 1 AND m.user_id = ?)";
+      params = [req.userId];
+    } else {
+      baseSql = "FROM messages m WHERE m.is_private = 0";
     }
 
     // 查询总数
-    const countSql = `SELECT COUNT(*) as total ${baseSql}`;
+    const countSql = `SELECT COUNT(m.id) as total ${baseSql}`;
 
-    // 查询分页数据
-    const dataSql = `SELECT * ${baseSql} ORDER BY is_private DESC, timestamp DESC LIMIT ? OFFSET ?`;
+    // 查询分页数据，并检查是否存在AI回复
+    const dataSql = `
+      SELECT m.*, EXISTS(
+        SELECT 1 FROM comments c WHERE c.message_id = m.id AND c.username = 'GoldieRill' AND c.is_deleted = 0
+      ) as has_ai_reply
+      ${baseSql}
+      ORDER BY m.is_private DESC, m.timestamp DESC
+      LIMIT ? OFFSET ?
+    `;
 
     // 执行总数查询
     db.get(countSql, params, (err, countResult) => {
@@ -56,12 +63,17 @@ module.exports = function(db, uploadsDir) {
           return;
         }
 
+        const processedRows = rows.map(row => ({
+          ...row,
+          has_ai_reply: row.has_ai_reply === 1
+        }));
+
         // 检查是否有匹配的 private 消息
-        const hasPrivateMessages = rows.some(row => row.is_private === 1);
+        const hasPrivateMessages = processedRows.some(row => row.is_private === 1);
 
         // 返回分页结果
         res.json({
-          messages: rows,
+          messages: processedRows,
           pagination: {
             page: pageNum,
             limit: limitNum,
@@ -155,7 +167,38 @@ module.exports = function(db, uploadsDir) {
         if (err) {
           return res.status(500).json({ error: err.message });
         }
+        
+        // 立即响应用户
         res.status(201).json(row);
+
+        // --- AI 触发逻辑 (异步) ---
+        if (row.content && row.content.toLowerCase().includes('@goldierill')) {
+          console.log(`[AI Trigger] Mention detected in message ID: ${row.id}.`);
+          
+          // 使用异步IIFE处理AI逻辑
+          (async () => {
+            try {
+              const aiResponseText = await getAIResponse(row.content);
+
+              if (aiResponseText) {
+                console.log(`[AI] Received response. Saving to DB for message ${row.id}.`);
+                // 将AI响应作为新评论保存
+                db.run(`INSERT INTO comments (pid, user_id, username, text, message_id) VALUES (?, ?, ?, ?, ?)`,
+                  [null, null, 'GoldieRill', aiResponseText, row.id], function(err) {
+                    if (err) {
+                      console.error('[AI Error] Failed to insert AI comment into database:', err);
+                    } else {
+                      console.log(`[AI Success] AI comment saved with ID: ${this.lastID}.`);
+                    }
+                  });
+              } else {
+                console.log('[AI] Handler returned no response. Not saving comment.');
+              }
+            } catch (aiError) {
+              console.error(`[AI Error] An error occurred during AI processing for message ${row.id}:`, aiError);
+            }
+          })();
+        }
       });
     });
   });

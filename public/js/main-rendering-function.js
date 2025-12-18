@@ -4,6 +4,10 @@ import {
 import {
     youtubeExtension
 } from './youtube-extension.js';
+import {
+    loadCommentsForMessage
+} from './comment-loader.js';
+
 
 
 let extensions = [];
@@ -312,6 +316,14 @@ export const renderMessage = (message) => {
     commentsContainer.id = `comments-for-${message.id}`;
     commentsContainer.className = 'mt-4 pt-4 border-t border-gray-800 hidden';
     messageElement.appendChild(commentsContainer);
+
+    // 如果存在AI回复，则自动加载评论区
+    // 使用setTimeout确保messageElement已添加到DOM中，以便loadCommentsForMessage可以找到它
+    if (message.has_ai_reply) {
+        setTimeout(() => {
+            loadCommentsForMessage(message.id);
+        }, 0);
+    }
 
     return messageElement;
 };
