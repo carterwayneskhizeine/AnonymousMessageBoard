@@ -10,12 +10,16 @@ const { calculateHotScore } = require('../utils/hot-score');
  */
 module.exports = function(db) {
   /**
-   * 异步更新消息的 hot_score
+   * 异步更新消息的 hot_score, 现在基于总点赞数
    * @param {number} messageId - 消息ID
    */
   async function updateMessageHotScore(messageId) {
     console.log(`[HotScore] Starting update for message ID: ${messageId}`);
-    db.get(`SELECT comment_count, timestamp FROM messages WHERE id = ?`, [messageId], (err, message) => {
+
+    const getMessageTimestampSql = `SELECT timestamp FROM messages WHERE id = ?`;
+    const getTotalLikesSql = `SELECT SUM(likes) as total_likes FROM comments WHERE message_id = ? AND is_deleted = 0`;
+
+    db.get(getMessageTimestampSql, [messageId], (err, message) => {
       if (err) {
         console.error(`[HotScore] Error fetching message ${messageId}:`, err);
         return;
@@ -25,14 +29,22 @@ module.exports = function(db) {
         return;
       }
 
-      const newHotScore = calculateHotScore(message.comment_count, message.timestamp);
-
-      db.run(`UPDATE messages SET hot_score = ? WHERE id = ?`, [newHotScore, messageId], (err) => {
+      db.get(getTotalLikesSql, [messageId], (err, result) => {
         if (err) {
-          console.error(`[HotScore] Error updating hot_score for message ${messageId}:`, err);
-        } else {
-          console.log(`[HotScore] Successfully updated hot_score for message ${messageId} to ${newHotScore}`);
+          console.error(`[HotScore] Error calculating total likes for message ${messageId}:`, err);
+          return;
         }
+        
+        const totalLikes = result.total_likes || 0;
+        const newHotScore = calculateHotScore(totalLikes, message.timestamp);
+
+        db.run(`UPDATE messages SET hot_score = ? WHERE id = ?`, [newHotScore, messageId], (err) => {
+          if (err) {
+            console.error(`[HotScore] Error updating hot_score for message ${messageId}:`, err);
+          } else {
+            console.log(`[HotScore] Successfully updated hot_score for message ${messageId} to ${newHotScore} based on ${totalLikes} total likes.`);
+          }
+        });
       });
     });
   }
@@ -109,7 +121,7 @@ module.exports = function(db) {
             profile: '',
             verified: false
           },
-          score: row.score || 0,
+          likes: row.likes || 0,
           time: new Date(row.time).toISOString(),
           edit: row.is_editable ? {
             edited: false,
@@ -160,7 +172,7 @@ module.exports = function(db) {
                   profile: '',
                   verified: false
                 },
-                score: reply.score || 0,
+                likes: reply.likes || 0,
                 time: new Date(reply.time).toISOString(),
                 edit: reply.is_editable ? {
                   edited: false,
@@ -307,7 +319,7 @@ module.exports = function(db) {
                 profile: '',
                 verified: false
               },
-              score: row.score || 0,
+              likes: row.likes || 0,
               time: new Date(row.time).toISOString(),
               edit: row.is_editable ? {
                 edited: false,
@@ -438,7 +450,7 @@ module.exports = function(db) {
               profile: '',
               verified: false
             },
-            score: row.score || 0,
+            likes: row.likes || 0,
             time: new Date(row.time).toISOString(),
             edit: {
               edited: true,
@@ -505,18 +517,15 @@ module.exports = function(db) {
     });
   });
 
-  // API: 评论投票
-  router.post('/:id/vote', (req, res) => {
+  // API: 评论点赞/取消点赞
+  router.post('/:id/like', (req, res) => {
     const { id } = req.params;
-    const { vote } = req.body;
+    const commentId = parseInt(id);
 
-    if (vote !== 1 && vote !== -1) {
-      return res.status(400).json({ error: 'Vote must be either 1 (upvote) or -1 (downvote)' });
-    }
-
-    db.get(`SELECT * FROM comments WHERE id = ?`, [id], (err, comment) => {
+    // 1. 获取评论及其点赞者列表
+    db.get(`SELECT likes, likers FROM comments WHERE id = ?`, [commentId], (err, comment) => {
       if (err) {
-        console.error('Error fetching comment for voting:', err);
+        console.error('Error fetching comment for liking:', err);
         return res.status(500).json({ error: err.message });
       }
 
@@ -524,59 +533,50 @@ module.exports = function(db) {
         return res.status(404).json({ error: 'Comment not found' });
       }
 
-      let votes = {};
+      let likers = [];
       try {
-        votes = JSON.parse(comment.votes || '{}');
+        likers = JSON.parse(comment.likers || '[]');
       } catch (e) {
-        console.error('Error parsing votes JSON:', e);
-        votes = {};
+        console.error('Error parsing likers JSON:', e);
+        return res.status(500).json({ error: 'Could not process like data.' });
       }
 
-      const currentUserId = req.userId ? `user_${req.userId}` : `anonymous_${req.ip || 'unknown'}`;
-      const previousVote = votes[currentUserId];
+      // 2. 确定当前用户ID
+      const currentUserIdentifier = req.userId ? `user_${req.userId}` : `anonymous_${req.ip || 'unknown'}`;
+      
+      // 3. 检查用户是否已点赞
+      const userIndex = likers.indexOf(currentUserIdentifier);
+      let newLikesCount;
+      let userHasLiked;
 
-      if (previousVote === vote) {
-        delete votes[currentUserId];
-        vote = 0;
+      if (userIndex > -1) {
+        // 用户已点赞，现在取消点赞
+        likers.splice(userIndex, 1); // 移除用户
+        newLikesCount = Math.max(0, comment.likes - 1); // 保证不为负
+        userHasLiked = false;
       } else {
-        votes[currentUserId] = vote;
+        // 用户未点赞，现在点赞
+        likers.push(currentUserIdentifier); // 添加用户
+        newLikesCount = comment.likes + 1;
+        userHasLiked = true;
       }
 
-      let scoreChange = 0;
-      if (vote !== 0) {
-        if (previousVote && previousVote !== vote) {
-          scoreChange = -previousVote + vote;
-        } else if (!previousVote) {
-          scoreChange = vote;
-        }
-      } else {
-        scoreChange = -previousVote;
-      }
-
+      // 4. 更新数据库
+      const newLikersJson = JSON.stringify(likers);
       db.run(
-        `UPDATE comments SET score = score + ?, votes = ? WHERE id = ?`,
-        [scoreChange, JSON.stringify(votes), id],
+        `UPDATE comments SET likes = ?, likers = ? WHERE id = ?`,
+        [newLikesCount, newLikersJson, commentId],
         function(err) {
           if (err) {
-            console.error('Error updating comment vote:', err);
+            console.error('Error updating comment likes:', err);
             return res.status(500).json({ error: err.message });
           }
 
-          if (this.changes === 0) {
-            return res.status(404).json({ error: 'Comment not found' });
-          }
-
-          db.get(`SELECT score FROM comments WHERE id = ?`, [id], (err, updatedComment) => {
-            if (err) {
-              console.error('Error fetching updated comment score:', err);
-              return res.status(500).json({ error: err.message });
-            }
-
-            res.json({
-              success: true,
-              score: updatedComment.score,
-              vote: vote !== 0 ? vote : (previousVote ? 0 : vote)
-            });
+          // 5. 返回成功响应
+          res.json({
+            success: true,
+            likes: newLikesCount,
+            userHasLiked: userHasLiked
           });
         }
       );

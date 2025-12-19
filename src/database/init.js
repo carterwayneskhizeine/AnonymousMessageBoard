@@ -92,14 +92,12 @@ function initializeDatabase(db, cleanupOrphanedImages) {
       user_id INTEGER DEFAULT NULL,  -- 用户ID，NULL表示匿名用户
       username TEXT NOT NULL,  -- 用户名，即使是匿名用户也会有名称
       text TEXT NOT NULL,  -- 评论内容
-      score INTEGER DEFAULT 0,  -- 评论分数（赞/踩）
-      votes TEXT DEFAULT '{}',  -- 存储投票信息，格式为JSON字符串
+      likes INTEGER DEFAULT 0, -- 点赞数
+      likers TEXT DEFAULT '[]', -- 存储点赞用户信息，格式为JSON字符串数组
       time DATETIME DEFAULT CURRENT_TIMESTAMP,  -- 评论时间
       is_deleted INTEGER DEFAULT 0,  -- 是否删除
       is_editable INTEGER DEFAULT 1,  -- 是否可编辑
       message_id INTEGER,  -- 关联的消息ID
-      upvotes INTEGER DEFAULT 0,  -- 赞同票数
-      downvotes INTEGER DEFAULT 0,  -- 反对票数
       FOREIGN KEY(message_id) REFERENCES messages(id)
     )`, (err) => {
       if (err) {
@@ -114,13 +112,13 @@ function initializeDatabase(db, cleanupOrphanedImages) {
   }
 
   /**
-   * 对现有数据进行一次性回填，计算 comment_count 和 hot_score
+   * 对现有数据进行一次性回填，计算 comment_count 和基于总点赞数的 hot_score
    */
   function backfillHotScores() {
     console.log('[Backfill] Starting to backfill comment_count and hot_score for existing messages...');
 
     db.serialize(() => {
-      // 步骤 1: 更新所有消息的 comment_count
+      // 步骤 1: 更新所有消息的 comment_count (此逻辑仍然有用)
       const updateCountsSql = `
         UPDATE messages
         SET comment_count = (
@@ -136,29 +134,37 @@ function initializeDatabase(db, cleanupOrphanedImages) {
       db.run(updateCountsSql, function(err) {
         if (err) {
           console.error('[Backfill] Error updating comment_count:', err.message);
-          return;
+          // Don't stop, proceed to hot_score backfill
         }
         console.log(`[Backfill] Successfully updated comment_count for ${this.changes} messages.`);
 
-        // 步骤 2: 获取所有消息，计算并更新 hot_score
-        db.all(`SELECT id, comment_count, timestamp FROM messages`, [], (err, messages) => {
+        // 步骤 2: 获取所有消息及其总点赞数，计算并更新 hot_score
+        const messagesWithLikesSql = `
+          SELECT
+            m.id,
+            m.timestamp,
+            (SELECT SUM(c.likes) FROM comments c WHERE c.message_id = m.id AND c.is_deleted = 0) as total_likes
+          FROM messages m
+        `;
+        
+        db.all(messagesWithLikesSql, [], (err, messages) => {
           if (err) {
             console.error('[Backfill] Error fetching messages for hot_score calculation:', err.message);
             return;
           }
 
           if (messages.length === 0) {
-            console.log('[Backfill] No messages to backfill. Completed.');
+            console.log('[Backfill] No messages to backfill for hot_score. Completed.');
             return;
           }
           
-          console.log(`[Backfill] Calculating hot_score for ${messages.length} messages...`);
+          console.log(`[Backfill] Calculating hot_score for ${messages.length} messages based on total likes...`);
           
-          // 使用序列化确保更新操作有序进行
           db.serialize(() => {
             const stmt = db.prepare(`UPDATE messages SET hot_score = ? WHERE id = ?`);
             messages.forEach(message => {
-              const hotScore = calculateHotScore(message.comment_count, message.timestamp);
+              const totalLikes = message.total_likes || 0;
+              const hotScore = calculateHotScore(totalLikes, message.timestamp);
               stmt.run(hotScore, message.id, (err) => {
                 if (err) {
                   console.error(`[Backfill] Error updating hot_score for message ${message.id}:`, err.message);

@@ -66,34 +66,24 @@ export const createCommentElement = (comment, messageId, parentId, commentMap) =
     const actionsElement = document.createElement('div');
     actionsElement.className = 'flex items-center gap-3 text-xs';
 
-    // Vote buttons logic (manually building to have custom layout if needed, or reusing buttons)
-    // We'll use simple text/icon mix here
-    const voteContainer = document.createElement('div');
-    voteContainer.className = 'flex items-center gap-1 bg-bp-black rounded-full border border-bp-gray px-1';
+    // Like button logic
+    const likeContainer = document.createElement('div');
+    likeContainer.className = 'flex items-center gap-1 bg-bp-black rounded-full border border-bp-gray px-1';
     
-    const upBtn = document.createElement('button');
-    upBtn.dataset.action = 'vote';
-    upBtn.dataset.vote = 'up';
-    upBtn.dataset.id = comment.id;
-    upBtn.className = 'p-1 hover:text-bp-gold text-bp-text-muted transition-colors';
-    upBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" /></svg>`;
+    const likeBtn = document.createElement('button');
+    likeBtn.dataset.action = 'like';
+    likeBtn.dataset.id = comment.id;
+    likeBtn.className = 'p-1 text-bp-text-muted transition-colors hover:text-red-400';
+    likeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd" /></svg>`;
     
-    const score = document.createElement('span');
-    score.className = 'text-gray-400 font-mono text-[10px] min-w-[12px] text-center';
-    score.textContent = comment.score;
+    const likesCount = document.createElement('span');
+    likesCount.className = 'text-gray-400 font-mono text-[10px] min-w-[12px] text-center';
+    likesCount.textContent = comment.likes || 0;
     
-    const downBtn = document.createElement('button');
-    downBtn.dataset.action = 'vote';
-    downBtn.dataset.vote = 'down';
-    downBtn.dataset.id = comment.id;
-    downBtn.className = 'p-1 hover:text-red-400 text-bp-text-muted transition-colors';
-    downBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>`;
+    likeContainer.appendChild(likeBtn);
+    likeContainer.appendChild(likesCount);
     
-    voteContainer.appendChild(upBtn);
-    voteContainer.appendChild(score);
-    voteContainer.appendChild(downBtn);
-    
-    actionsElement.appendChild(voteContainer);
+    actionsElement.appendChild(likeContainer);
 
     // Divider
     // const divider = document.createElement('span');

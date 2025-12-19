@@ -5,7 +5,7 @@ import {
     handlePostComment
 } from './comment-post.js';
 import {
-    handleVote
+    handleLike
 } from './comment-vote.js';
 import {
     handleEditComment
@@ -189,9 +189,8 @@ export const renderCommentSection = (container, messageId, comments, pagination)
         const action = button.dataset.action;
         const commentId = button.dataset.id;
 
-        if (action === 'vote') {
-            const vote = button.dataset.vote === 'up' ? 1 : -1;
-            handleVote(commentId, vote, messageId);
+        if (action === 'like') {
+            handleLike(commentId, messageId);
         } else if (action === 'edit') {
             handleEditComment(commentId, messageId, commentsListContainer);
         } else if (action === 'delete') {

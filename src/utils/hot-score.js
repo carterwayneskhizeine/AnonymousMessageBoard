@@ -1,19 +1,19 @@
 /**
  * 根据 Reddit 的热门算法计算帖子的分数
- * @param {number} comment_count - 帖子的评论数（作为基础分数）
+ * @param {number} total_likes - 帖子所有评论的总点赞数（作为基础分数）
  * @param {string} timestamp - 帖子的创建时间 (e.g., "2023-10-27 10:00:00")
  * @returns {number} - 计算出的热门分数
  */
-function calculateHotScore(comment_count, timestamp) {
+function calculateHotScore(total_likes, timestamp) {
   // Reddit 算法: log10(z) + (y * t) / 45000
   // z = max(1, |score|)
   // y = sign(score)
   // t = seconds since Unix epoch
 
-  const score = comment_count; // 在我们的例子中，基础分数是评论数
+  const score = total_likes; // 基础分数是所有评论的总点赞数
   const order = Math.log10(Math.max(1, score));
   
-  // y (sign) in our case is always 1 since comment_count is non-negative
+  // y (sign) in our case is always 1 since total_likes is non-negative
   const sign = 1;
 
   // t is the number of seconds since the Unix epoch.
