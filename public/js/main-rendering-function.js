@@ -7,6 +7,9 @@ import {
 import {
     loadCommentsForMessage
 } from './comment-loader.js';
+import {
+    currentUser
+} from './state.js';
 
 
 let extensions = [];
@@ -253,7 +256,7 @@ export const renderMessage = (message) => {
             if (pre.querySelector('.copy-code-btn')) return;
 
             const wrapper = document.createElement('div');
-            wrapper.className = 'relative group/code';
+wrapper.className = 'relative group/code';
 
             pre.parentNode.insertBefore(wrapper, pre);
             wrapper.appendChild(pre);
@@ -298,16 +301,19 @@ export const renderMessage = (message) => {
 
     const actions = document.createElement('div');
     actions.className = 'flex gap-1 opacity-80 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200';
-    
+
     // Actions
     actions.appendChild(createButton('Copy', message.id, 'copy'));
-    
+
     const replyButton = createButton('Reply', message.id, 'reply');
     replyButton.classList.add('hidden'); // Initially hidden
     actions.appendChild(replyButton);
-    
-    actions.appendChild(createButton('Edit', message.id, 'edit'));
-    actions.appendChild(createButton('Delete', message.id, 'delete'));
+
+    // Conditional rendering for Edit and Delete buttons
+    if (currentUser && (currentUser.is_admin || currentUser.id === message.user_id)) {
+        actions.appendChild(createButton('Edit', message.id, 'edit'));
+        actions.appendChild(createButton('Delete', message.id, 'delete'));
+    }
 
     footer.appendChild(timestamp);
     footer.appendChild(actions);
