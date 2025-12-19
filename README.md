@@ -60,7 +60,7 @@ docker compose up --build -d
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/carterwayneskhizeine/AnonymousMessageBoard.git
+    git clone https://github.com/carterwayneskhizeine/BlackPulse.git
     cd AnonymousMessageBoard
     ```
 
