@@ -69,3 +69,9 @@ export const filePreviewName = document.getElementById('file-preview-name');
 export const filePreviewType = document.getElementById('file-preview-type');
 export const filePreviewSize = document.getElementById('file-preview-size');
 export const filePreviewIcon = document.getElementById('file-preview-icon');
+
+// Sidebar
+export const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
+export const desktopSidebar = document.getElementById('desktop-sidebar');
+export const mainContent = document.getElementById('main-content');
+export const mainContentWrapper = document.getElementById('main-content-wrapper');

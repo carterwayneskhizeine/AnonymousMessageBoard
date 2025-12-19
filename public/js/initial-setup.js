@@ -26,7 +26,11 @@ import {
     mobileFeedTrendingBtn,
     mobileFeedPostsBtn,
     mobileSearchToggle,
-    globalSearchContainer
+    globalSearchContainer,
+    sidebarToggleBtn,
+    desktopSidebar,
+    mainContent,
+    mainContentWrapper
 } from './ui-elements.js';
 import {
     isPrivateFilterMode,
@@ -204,6 +208,34 @@ export const initEventListeners = () => {
              if(!mobileSearchContainer.classList.contains('hidden') && input) {
                  input.focus();
              }
+        });
+    }
+
+    // --- Sidebar Toggle ---
+    if (sidebarToggleBtn && desktopSidebar && mainContent && mainContentWrapper) {
+        sidebarToggleBtn.addEventListener('click', () => {
+            desktopSidebar.classList.toggle('lg:block');
+
+            // Check if the sidebar is now hidden on large screens
+            const isSidebarHidden = !desktopSidebar.classList.contains('lg:block');
+
+            if (isSidebarHidden) {
+                // --- COLLAPSED STATE ---
+                // Main content becomes a full-width flex container to center its child
+                mainContent.classList.remove('lg:col-span-9');
+                mainContent.classList.add('lg:col-span-12', 'lg:flex', 'lg:justify-center');
+
+                // Inner wrapper gets a fixed 3/4 width on large screens
+                mainContentWrapper.classList.add('lg:w-9/12');
+            } else {
+                // --- VISIBLE STATE ---
+                // Main content reverts to a 9-column grid item
+                mainContent.classList.add('lg:col-span-9');
+                mainContent.classList.remove('lg:col-span-12', 'lg:flex', 'lg:justify-center');
+
+                // Inner wrapper reverts to full width of its parent grid cell
+                mainContentWrapper.classList.remove('lg:w-9/12');
+            }
         });
     }
 
