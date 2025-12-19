@@ -44,11 +44,14 @@ export const fetchAndRenderMessages = async (page = 1) => {
         setCurrentPrivateKey(privateKeyInput.value.trim());
 
         // 构建 URL
-        let url = `/api/messages?page=${page}&limit=5`;
-        
-        // 添加 Feed 类型过滤
-        if (currentFeedType && currentFeedType !== 'latest') {
-            url += `&type=${currentFeedType}`;
+        let url;
+        if (currentFeedType === 'trending') {
+            url = `/api/messages/trending?page=${page}&limit=5`;
+        } else {
+            url = `/api/messages?page=${page}&limit=5`;
+            if (currentFeedType && currentFeedType !== 'latest') {
+                url += `&type=${currentFeedType}`;
+            }
         }
 
         if (currentPrivateKey) {

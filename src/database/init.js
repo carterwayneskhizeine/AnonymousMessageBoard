@@ -1,3 +1,5 @@
+const { calculateHotScore } = require('../utils/hot-score');
+
 /**
  * 初始化数据库表结构和索引
  * @param {import('sqlite3').Database} db - SQLite 数据库实例
@@ -15,7 +17,9 @@ function initializeDatabase(db, cleanupOrphanedImages) {
     has_image INTEGER DEFAULT 0,
     image_filename TEXT DEFAULT NULL,
     image_mime_type TEXT DEFAULT NULL,
-    image_size INTEGER DEFAULT NULL
+    image_size INTEGER DEFAULT NULL,
+    comment_count INTEGER DEFAULT 0,
+    hot_score REAL DEFAULT 0
   )`, (err) => {
     if (err) {
       console.error('Error creating messages table:', err.message);
@@ -36,7 +40,9 @@ function initializeDatabase(db, cleanupOrphanedImages) {
       { sql: `ALTER TABLE messages ADD COLUMN has_image INTEGER DEFAULT 0`, name: 'has_image' },
       { sql: `ALTER TABLE messages ADD COLUMN image_filename TEXT DEFAULT NULL`, name: 'image_filename' },
       { sql: `ALTER TABLE messages ADD COLUMN image_mime_type TEXT DEFAULT NULL`, name: 'image_mime_type' },
-      { sql: `ALTER TABLE messages ADD COLUMN image_size INTEGER DEFAULT NULL`, name: 'image_size' }
+      { sql: `ALTER TABLE messages ADD COLUMN image_size INTEGER DEFAULT NULL`, name: 'image_size' },
+      { sql: `ALTER TABLE messages ADD COLUMN comment_count INTEGER DEFAULT 0`, name: 'comment_count' },
+      { sql: `ALTER TABLE messages ADD COLUMN hot_score REAL DEFAULT 0`, name: 'hot_score' }
     ];
 
     let completed = 0;
@@ -107,6 +113,72 @@ function initializeDatabase(db, cleanupOrphanedImages) {
     });
   }
 
+  /**
+   * 对现有数据进行一次性回填，计算 comment_count 和 hot_score
+   */
+  function backfillHotScores() {
+    console.log('[Backfill] Starting to backfill comment_count and hot_score for existing messages...');
+
+    db.serialize(() => {
+      // 步骤 1: 更新所有消息的 comment_count
+      const updateCountsSql = `
+        UPDATE messages
+        SET comment_count = (
+          SELECT COUNT(*)
+          FROM comments
+          WHERE comments.message_id = messages.id AND comments.is_deleted = 0
+        )
+        WHERE EXISTS (
+          SELECT 1 FROM comments WHERE comments.message_id = messages.id
+        );
+      `;
+
+      db.run(updateCountsSql, function(err) {
+        if (err) {
+          console.error('[Backfill] Error updating comment_count:', err.message);
+          return;
+        }
+        console.log(`[Backfill] Successfully updated comment_count for ${this.changes} messages.`);
+
+        // 步骤 2: 获取所有消息，计算并更新 hot_score
+        db.all(`SELECT id, comment_count, timestamp FROM messages`, [], (err, messages) => {
+          if (err) {
+            console.error('[Backfill] Error fetching messages for hot_score calculation:', err.message);
+            return;
+          }
+
+          if (messages.length === 0) {
+            console.log('[Backfill] No messages to backfill. Completed.');
+            return;
+          }
+          
+          console.log(`[Backfill] Calculating hot_score for ${messages.length} messages...`);
+          
+          // 使用序列化确保更新操作有序进行
+          db.serialize(() => {
+            const stmt = db.prepare(`UPDATE messages SET hot_score = ? WHERE id = ?`);
+            messages.forEach(message => {
+              const hotScore = calculateHotScore(message.comment_count, message.timestamp);
+              stmt.run(hotScore, message.id, (err) => {
+                if (err) {
+                  console.error(`[Backfill] Error updating hot_score for message ${message.id}:`, err.message);
+                }
+              });
+            });
+            
+            stmt.finalize((err) => {
+              if (err) {
+                console.error('[Backfill] Error finalizing statement:', err.message);
+              } else {
+                console.log('[Backfill] hot_score backfill process completed.');
+              }
+            });
+          });
+        });
+      });
+    });
+  }
+
   // 创建数据库索引
   function createDatabaseIndexes() {
     console.log('Creating database indexes for performance optimization...');
@@ -121,7 +193,8 @@ function initializeDatabase(db, cleanupOrphanedImages) {
       { sql: `CREATE INDEX IF NOT EXISTS idx_comments_time ON comments(time DESC)`, name: 'idx_comments_time' },
       { sql: `CREATE INDEX IF NOT EXISTS idx_comments_pid ON comments(pid)`, name: 'idx_comments_pid' },
       { sql: `CREATE INDEX IF NOT EXISTS idx_comments_user_id ON comments(user_id)`, name: 'idx_comments_user_id' },
-      { sql: `CREATE INDEX IF NOT EXISTS idx_comments_message_id ON comments(message_id)`, name: 'idx_comments_message_id' }
+      { sql: `CREATE INDEX IF NOT EXISTS idx_comments_message_id ON comments(message_id)`, name: 'idx_comments_message_id' },
+      { sql: `CREATE INDEX IF NOT EXISTS idx_messages_hot_score ON messages(hot_score DESC)`, name: 'idx_messages_hot_score' }
     ];
 
     let completed = 0;
@@ -137,6 +210,9 @@ function initializeDatabase(db, cleanupOrphanedImages) {
         completed++;
         if (completed === indexes.length) {
           console.log('Database indexes creation completed.');
+
+          // 在索引创建完成后并且在设置其他任务之前，运行回填脚本
+          backfillHotScores();
 
           // 数据库初始化完成后，清理孤儿图片文件
           cleanupOrphanedImages();

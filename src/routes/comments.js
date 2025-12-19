@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { getAIResponse } = require('../utils/ai-handler');
+const { calculateHotScore } = require('../utils/hot-score');
 
 /**
  * @description 评论相关的路由
@@ -8,6 +9,34 @@ const { getAIResponse } = require('../utils/ai-handler');
  * @returns {express.Router}
  */
 module.exports = function(db) {
+  /**
+   * 异步更新消息的 hot_score
+   * @param {number} messageId - 消息ID
+   */
+  async function updateMessageHotScore(messageId) {
+    console.log(`[HotScore] Starting update for message ID: ${messageId}`);
+    db.get(`SELECT comment_count, timestamp FROM messages WHERE id = ?`, [messageId], (err, message) => {
+      if (err) {
+        console.error(`[HotScore] Error fetching message ${messageId}:`, err);
+        return;
+      }
+      if (!message) {
+        console.error(`[HotScore] Message ${messageId} not found for update.`);
+        return;
+      }
+
+      const newHotScore = calculateHotScore(message.comment_count, message.timestamp);
+
+      db.run(`UPDATE messages SET hot_score = ? WHERE id = ?`, [newHotScore, messageId], (err) => {
+        if (err) {
+          console.error(`[HotScore] Error updating hot_score for message ${messageId}:`, err);
+        } else {
+          console.log(`[HotScore] Successfully updated hot_score for message ${messageId} to ${newHotScore}`);
+        }
+      });
+    });
+  }
+
   // API: 获取特定消息的评论
   router.get('/', (req, res) => {
     const { messageId, sort = '-time', page = 1, limit = 50 } = req.query;
@@ -294,6 +323,18 @@ module.exports = function(db) {
             // Respond to the user immediately so they don't have to wait for the AI.
             res.status(201).json(comment);
 
+            // --- Update message stats (asynchronous) ---
+            db.serialize(() => {
+              db.run(`UPDATE messages SET comment_count = comment_count + 1 WHERE id = ?`, [messageId], (err) => {
+                if (err) {
+                  console.error(`[Comment Post] Error incrementing comment_count for message ${messageId}:`, err);
+                } else {
+                  // After incrementing, update the hot score
+                  updateMessageHotScore(messageId);
+                }
+              });
+            });
+
             // --- AI Trigger Logic (Asynchronous) ---
             if (row.text && row.text.toLowerCase().includes('@goldierill')) {
               console.log(`[AI Trigger] Mention detected in comment ID: ${newCommentId}.`);
@@ -434,6 +475,9 @@ module.exports = function(db) {
         return res.status(403).json({ error: 'You can only delete your own comments' });
       }
 
+      // We need the message_id before we send the response
+      const messageId = comment.message_id;
+
       db.run(`UPDATE comments SET is_deleted = 1 WHERE id = ?`, [id], function(err) {
         if (err) {
           console.error('Error deleting comment:', err);
@@ -445,6 +489,18 @@ module.exports = function(db) {
         }
 
         res.status(204).send();
+
+        // --- Update message stats (asynchronous) ---
+        db.serialize(() => {
+          db.run(`UPDATE messages SET comment_count = comment_count - 1 WHERE id = ? AND comment_count > 0`, [messageId], (err) => {
+            if (err) {
+              console.error(`[Comment Delete] Error decrementing comment_count for message ${messageId}:`, err);
+            } else {
+              // After decrementing, update the hot score
+              updateMessageHotScore(messageId);
+            }
+          });
+        });
       });
     });
   });

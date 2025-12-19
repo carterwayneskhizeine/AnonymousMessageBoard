@@ -23,6 +23,7 @@ A feature-rich anonymous message board web application built with Node.js, Expre
 *   **Responsive Design**: The application is designed to be accessible and usable across various devices, with mobile-friendly buttons.
 *   **Dockerized Deployment**: Easy setup and deployment using Docker and Docker Compose.
 *   **AI-Powered Comment Responses**: Users can mention `@goldierill` in comments to receive AI-generated replies based on the message context.
+*   **Trending Feed**: A "Trending" feed that uses a Reddit-style algorithm to sort messages based on comment activity and time-decay, allowing users to discover the most popular and engaging content dynamically.
 
 ## Tech Stack
 
@@ -254,26 +255,31 @@ You can interact with the message board API directly using `curl` commands. This
 curl -s "http://localhost:1989/api/messages"
 ```
 
-**2. Post a public message**
+**2. Get trending messages**
+```bash
+curl -s "http://localhost:1989/api/messages/trending"
+```
+
+**3. Post a public message**
 ```bash
 curl -s -X POST "http://localhost:1989/api/messages" \
   -H "Content-Type: application/json" \
   -d "{\"content\": \"Your message here\"}"
 ```
 
-**3. Post a private message with KEY**
+**4. Post a private message with KEY**
 ```bash
 curl -s -X POST "http://localhost:1989/api/messages" \
   -H "Content-Type: application/json" \
   -d "{\"content\": \"Secret message\", \"isPrivate\": true, \"privateKey\": \"your-secret-key\"}"
 ```
 
-**4. View private messages with KEY**
+**5. View private messages with KEY**
 ```bash
 curl -s "http://localhost:1989/api/messages?privateKey=your-secret-key"
 ```
 
-**5. Get messages with pagination**
+**6. Get messages with pagination**
 ```bash
 # Get page 1 (default, 5 messages per page)
 curl -s "http://localhost:1989/api/messages?page=1&limit=5"
@@ -771,6 +777,30 @@ The entire frontend JavaScript codebase was refactored from a collection of scri
     *   `public/js/utils.js`: New module for shared utility functions (`createButton`, `showError`, etc.).
     *   All other `.js` files in `public/js/`: Refactored to remove global dependencies, now importing required functions/variables and exporting their own functionality.
     *   `views/index.ejs`: Modified to load only the `main.js` module script, removing all other individual script tags.
+
+#### Trending Feed Feature
+The following modifications were made to implement the Trending feed, which sorts messages based on a hotness score.
+
+1.  **`src/database/init.js`**:
+    -   Added `comment_count` (INTEGER) and `hot_score` (REAL) columns to the `messages` table to store engagement metrics.
+    -   Added `idx_messages_hot_score` index on the `hot_score` column to optimize sorting performance.
+    -   Implemented a `backfillHotScores` function that runs on startup to calculate and populate `comment_count` and `hot_score` for all existing messages, ensuring historical data is compatible with the new feature.
+
+2.  **`src/utils/hot-score.js`**:
+    -   New utility module created to house the `calculateHotScore` function.
+    -   This function implements a Reddit-style trending algorithm: `Score = log10(comment_count) + (timestamp / 45000)`, which balances popularity (comment count) with time decay.
+
+3.  **`src/routes/comments.js`**:
+    -   Modified the comment creation (`POST /`) and deletion (`DELETE /:id`) routes.
+    -   When a comment is added or removed, it now asynchronously updates the parent message's `comment_count` and recalculates its `hot_score`, keeping the trending rank up-to-date.
+
+4.  **`src/routes/messages.js`**:
+    -   Added a new API endpoint: `GET /api/messages/trending`.
+    -   This endpoint retrieves public messages, ordered by `hot_score` in descending order, and supports pagination.
+
+5.  **`public/js/api-rendering-logic.js`**:
+    -   Modified the `fetchAndRenderMessages` function to detect when the `currentFeedType` is 'trending'.
+    -   When it is, the function now calls the new `/api/messages/trending` endpoint instead of the standard message list endpoint.
 
 ## Development
 
