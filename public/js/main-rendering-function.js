@@ -302,6 +302,23 @@ wrapper.className = 'relative group/code';
     const actions = document.createElement('div');
     actions.className = 'flex gap-1 opacity-80 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200';
 
+    // Like button
+    const likeContainer = document.createElement('div');
+    likeContainer.className = 'flex items-center gap-1 rounded-full px-1';
+
+    const likeBtn = createButton('', message.id, 'like-message'); // Use a different action name to distinguish from comment likes
+    // Apply liked style based on userHasLiked property
+    likeBtn.className = `p-1 transition-colors ${message.userHasLiked ? 'text-red-500 hover:text-red-400' : 'text-bp-text-muted hover:text-red-400'}`;
+    likeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd" /></svg>`;
+    
+    const likesCount = document.createElement('span');
+    likesCount.className = 'text-gray-400 font-mono text-xs min-w-[12px]';
+    likesCount.textContent = message.likes || 0;
+
+    likeContainer.appendChild(likeBtn);
+    likeContainer.appendChild(likesCount);
+    actions.appendChild(likeContainer);
+
     // Actions
     actions.appendChild(createButton('Copy', message.id, 'copy'));
 

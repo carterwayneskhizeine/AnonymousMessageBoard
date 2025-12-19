@@ -70,12 +70,20 @@ module.exports = function(db, uploadsDir) {
           return;
         }
 
-        const processedRows = rows.map(row => ({
-          ...row,
-          has_ai_reply: row.has_ai_reply === 1
-        }));
-
-        // 检查是否有匹配的 private 消息
+        const currentUserIdentifier = req.userId ? `user_${req.userId}` : `anonymous_${req.ip || 'unknown'}`;
+        const processedRows = rows.map(row => {
+          let likers = [];
+          try {
+            likers = JSON.parse(row.likers || '[]');
+          } catch (e) {
+            console.error(`Error parsing likers for message ${row.id}:`, e);
+          }
+          return {
+            ...row,
+            has_ai_reply: row.has_ai_reply === 1,
+            userHasLiked: likers.includes(currentUserIdentifier)
+          };
+        });
         const hasPrivateMessages = processedRows.some(row => row.is_private === 1);
 
         // 返回分页结果
@@ -138,10 +146,20 @@ module.exports = function(db, uploadsDir) {
           return;
         }
 
-        const processedRows = rows.map(row => ({
-          ...row,
-          has_ai_reply: row.has_ai_reply === 1
-        }));
+        const currentUserIdentifier = req.userId ? `user_${req.userId}` : `anonymous_${req.ip || 'unknown'}`;
+        const processedRows = rows.map(row => {
+          let likers = [];
+          try {
+            likers = JSON.parse(row.likers || '[]');
+          } catch (e) {
+            console.error(`Error parsing likers for message ${row.id}:`, e);
+          }
+          return {
+            ...row,
+            has_ai_reply: row.has_ai_reply === 1,
+            userHasLiked: likers.includes(currentUserIdentifier)
+          };
+        });
 
         res.json({
           messages: processedRows,
@@ -354,6 +372,72 @@ module.exports = function(db, uploadsDir) {
           res.status(200).json(row);
         });
       });
+    });
+  });
+
+  // API: 消息点赞/取消点赞
+  router.post('/:id/like', (req, res) => {
+    const { id } = req.params;
+    const messageId = parseInt(id);
+
+    // 1. 获取消息及其点赞者列表
+    db.get(`SELECT likes, likers FROM messages WHERE id = ?`, [messageId], (err, message) => {
+      if (err) {
+        console.error('Error fetching message for liking:', err);
+        return res.status(500).json({ error: err.message });
+      }
+
+      if (!message) {
+        return res.status(404).json({ error: 'Message not found' });
+      }
+
+      let likers = [];
+      try {
+        likers = JSON.parse(message.likers || '[]');
+      } catch (e) {
+        console.error('Error parsing likers JSON:', e);
+        return res.status(500).json({ error: 'Could not process like data.' });
+      }
+
+      // 2. 确定当前用户ID
+      const currentUserIdentifier = req.userId ? `user_${req.userId}` : `anonymous_${req.ip || 'unknown'}`;
+      
+      // 3. 检查用户是否已点赞
+      const userIndex = likers.indexOf(currentUserIdentifier);
+      let newLikesCount;
+      let userHasLiked;
+
+      if (userIndex > -1) {
+        // 用户已点赞，现在取消点赞
+        likers.splice(userIndex, 1); // 移除用户
+        newLikesCount = Math.max(0, message.likes - 1); // 保证不为负
+        userHasLiked = false;
+      } else {
+        // 用户未点赞，现在点赞
+        likers.push(currentUserIdentifier); // 添加用户
+        newLikesCount = message.likes + 1;
+        userHasLiked = true;
+      }
+
+      // 4. 更新数据库
+      const newLikersJson = JSON.stringify(likers);
+      db.run(
+        `UPDATE messages SET likes = ?, likers = ? WHERE id = ?`,
+        [newLikesCount, newLikersJson, messageId],
+        function(err) {
+          if (err) {
+            console.error('Error updating message likes:', err);
+            return res.status(500).json({ error: err.message });
+          }
+
+          // 5. 返回成功响应
+          res.json({
+            success: true,
+            likes: newLikesCount,
+            userHasLiked: userHasLiked
+          });
+        }
+      );
     });
   });
 

@@ -14,6 +14,9 @@ import {
 import {
     loadCommentsForMessage
 } from './comment-loader.js';
+import {
+    fetchAndRenderMessages
+} from './api-rendering-logic.js';
 
 export const handleMessageClick = (e) => {
     const button = e.target.closest('button');
@@ -70,6 +73,8 @@ export const handleMessageClick = (e) => {
         } else {
             alert('Clipboard API not supported or message not found.');
         }
+    } else if (action === 'like-message') {
+        handleMessageLike(id);
     } else if (action === 'reply') {
         const commentsContainer = document.getElementById(`comments-for-${id}`);
         if (commentsContainer) {
@@ -84,3 +89,23 @@ export const handleMessageClick = (e) => {
         }
     }
 };
+
+async function handleMessageLike(messageId) {
+    try {
+        const response = await fetch(`/api/messages/${messageId}/like`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to like message');
+        }
+        
+        // For now, just refresh all messages to show the change
+        fetchAndRenderMessages();
+
+    } catch (error) {
+        console.error('Failed to like message:', error);
+        alert('An error occurred while liking the message.');
+    }
+}

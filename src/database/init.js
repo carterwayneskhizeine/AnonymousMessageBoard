@@ -19,7 +19,9 @@ function initializeDatabase(db, cleanupOrphanedImages) {
     image_mime_type TEXT DEFAULT NULL,
     image_size INTEGER DEFAULT NULL,
     comment_count INTEGER DEFAULT 0,
-    hot_score REAL DEFAULT 0
+    hot_score REAL DEFAULT 0,
+    likes INTEGER DEFAULT 0,
+    likers TEXT DEFAULT '[]'
   )`, (err) => {
     if (err) {
       console.error('Error creating messages table:', err.message);
@@ -42,7 +44,9 @@ function initializeDatabase(db, cleanupOrphanedImages) {
       { sql: `ALTER TABLE messages ADD COLUMN image_mime_type TEXT DEFAULT NULL`, name: 'image_mime_type' },
       { sql: `ALTER TABLE messages ADD COLUMN image_size INTEGER DEFAULT NULL`, name: 'image_size' },
       { sql: `ALTER TABLE messages ADD COLUMN comment_count INTEGER DEFAULT 0`, name: 'comment_count' },
-      { sql: `ALTER TABLE messages ADD COLUMN hot_score REAL DEFAULT 0`, name: 'hot_score' }
+      { sql: `ALTER TABLE messages ADD COLUMN hot_score REAL DEFAULT 0`, name: 'hot_score' },
+      { sql: `ALTER TABLE messages ADD COLUMN likes INTEGER DEFAULT 0`, name: 'likes' },
+      { sql: `ALTER TABLE messages ADD COLUMN likers TEXT DEFAULT '[]'`, name: 'likers' }
     ];
 
     let completed = 0;
