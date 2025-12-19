@@ -67,18 +67,23 @@ export const createCommentElement = (comment, messageId, parentId, commentMap) =
     actionsElement.className = 'flex items-center gap-3 text-xs';
 
     // Like button logic
+    const likeContainer = document.createElement('div');
+    likeContainer.className = 'flex items-center gap-1';
+    
     const likeBtn = document.createElement('button');
     likeBtn.dataset.action = 'like';
     likeBtn.dataset.id = comment.id;
-    likeBtn.className = 'btn-bp-icon p-1 text-bp-text-muted transition-colors hover:text-red-400';
-    likeBtn.innerHTML = `<svg id='Heart_Outline_24' width='18' height='18' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'><rect width='24' height='24' stroke='none' fill='#000000' opacity='0'/><g transform="matrix(0.77 0 0 0.77 12 12)" ><path style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: rgb(220,220,220); fill-rule: nonzero; opacity: 1;" transform=" translate(-16, -17.08)" d="M 16 28.15625 L 15.5 27.863281 C 14.988281 27.570313 3 20.53125 3 13 C 3 9.140625 6.140625 6 10 6 C 12.542969 6 14.773438 7.363281 16 9.398438 C 17.226563 7.363281 19.457031 6 22 6 C 25.859375 6 29 9.140625 29 13 C 29 20.53125 17.011719 27.570313 16.5 27.863281 Z M 10 8 C 7.242188 8 5 10.242188 5 13 C 5 18.605469 13.785156 24.445313 16 25.828125 C 18.214844 24.445313 27 18.605469 27 13 C 27 10.242188 24.757813 8 22 8 C 19.242188 8 17 10.242188 17 13 L 15 13 C 15 10.242188 12.757813 8 10 8 Z" stroke-linecap="round" /></g></svg>`;
-
+    likeBtn.className = `transition-colors font-medium text-xs hover:text-bp-gold ${comment.userHasLiked ? 'text-bp-gold' : 'text-bp-text-muted'}`;
+    likeBtn.textContent = 'like';
+    
     const likesCount = document.createElement('span');
     likesCount.className = 'text-gray-400 font-mono text-[10px] min-w-[12px] text-center';
     likesCount.textContent = comment.likes || 0;
-
-    actionsElement.appendChild(likeBtn);
-    actionsElement.appendChild(likesCount);
+    
+    likeContainer.appendChild(likeBtn);
+    likeContainer.appendChild(likesCount);
+    
+    actionsElement.appendChild(likeContainer);
 
     // Divider
     // const divider = document.createElement('span');

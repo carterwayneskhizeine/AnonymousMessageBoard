@@ -110,30 +110,40 @@ module.exports = function(db) {
         }
 
         // 处理返回数据格式，使其与Remark42兼容
-        const comments = rows.map(row => ({
-          id: row.id.toString(),
-          pid: row.pid ? row.pid.toString() : null,
-          text: row.text,
-          user: {
-            id: row.user_id ? `user_${row.user_id}` : `anonymous_${row.username}`,
-            name: row.user_username || row.username,
-            picture: '',
-            profile: '',
-            verified: false
-          },
-          likes: row.likes || 0,
-          time: new Date(row.time).toISOString(),
-          edit: row.is_editable ? {
-            edited: false,
-            reason: '',
-            time: null
-          } : null,
-          vote: 0,
-          controversy: 0,
-          deletable: row.user_id === req.userId || req.isAdmin,
-          editable: (row.user_id === req.userId && row.is_editable === 1) || req.isAdmin,
-          replies: []
-        }));
+        const currentUserIdentifier = req.userId ? `user_${req.userId}` : `anonymous_${req.ip || 'unknown'}`;
+        const comments = rows.map(row => {
+          let likers = [];
+          try {
+            likers = JSON.parse(row.likers || '[]');
+          } catch(e) {
+            console.error(`Error parsing likers for comment ${row.id}:`, e);
+          }
+          return {
+            id: row.id.toString(),
+            pid: row.pid ? row.pid.toString() : null,
+            text: row.text,
+            user: {
+              id: row.user_id ? `user_${row.user_id}` : `anonymous_${row.username}`,
+              name: row.user_username || row.username,
+              picture: '',
+              profile: '',
+              verified: false
+            },
+            likes: row.likes || 0,
+            userHasLiked: likers.includes(currentUserIdentifier),
+            time: new Date(row.time).toISOString(),
+            edit: row.is_editable ? {
+              edited: false,
+              reason: '',
+              time: null
+            } : null,
+            vote: 0,
+            controversy: 0,
+            deletable: row.user_id === req.userId || req.isAdmin,
+            editable: (row.user_id === req.userId && row.is_editable === 1) || req.isAdmin,
+            replies: []
+          }
+        });
 
         // 递归函数：获取指定评论ID的所有子回复
         function fetchNestedReplies(parentIds) {
@@ -161,30 +171,40 @@ module.exports = function(db) {
                 return;
               }
 
-              const replyObjects = replies.map(reply => ({
-                id: reply.id.toString(),
-                pid: reply.pid ? reply.pid.toString() : null,
-                text: reply.text,
-                user: {
-                  id: reply.user_id ? `user_${reply.user_id}` : `anonymous_${reply.username}`,
-                  name: reply.user_username || reply.username,
-                  picture: '',
-                  profile: '',
-                  verified: false
-                },
-                likes: reply.likes || 0,
-                time: new Date(reply.time).toISOString(),
-                edit: reply.is_editable ? {
-                  edited: false,
-                  reason: '',
-                  time: null
-                } : null,
-                vote: 0,
-                controversy: 0,
-                deletable: reply.user_id === req.userId || req.isAdmin,
-                editable: (reply.user_id === req.userId && reply.is_editable === 1) || req.isAdmin,
-                replies: []
-              }));
+              const currentUserIdentifier = req.userId ? `user_${req.userId}` : `anonymous_${req.ip || 'unknown'}`;
+              const replyObjects = replies.map(reply => {
+                let likers = [];
+                try {
+                  likers = JSON.parse(reply.likers || '[]');
+                } catch(e) {
+                  console.error(`Error parsing likers for comment ${reply.id}:`, e);
+                }
+                return {
+                  id: reply.id.toString(),
+                  pid: reply.pid ? reply.pid.toString() : null,
+                  text: reply.text,
+                  user: {
+                    id: reply.user_id ? `user_${reply.user_id}` : `anonymous_${reply.username}`,
+                    name: reply.user_username || reply.username,
+                    picture: '',
+                    profile: '',
+                    verified: false
+                  },
+                  likes: reply.likes || 0,
+                  userHasLiked: likers.includes(currentUserIdentifier),
+                  time: new Date(reply.time).toISOString(),
+                  edit: reply.is_editable ? {
+                    edited: false,
+                    reason: '',
+                    time: null
+                  } : null,
+                  vote: 0,
+                  controversy: 0,
+                  deletable: reply.user_id === req.userId || req.isAdmin,
+                  editable: (reply.user_id === req.userId && reply.is_editable === 1) || req.isAdmin,
+                  replies: []
+                }
+              });
 
               const replyIds = replies.map(r => parseInt(r.id));
               fetchNestedReplies(replyIds)
