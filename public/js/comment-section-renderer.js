@@ -128,12 +128,13 @@ export const renderCommentSection = (container, messageId, comments, pagination)
     `;
 
     const toggleFormButton = document.createElement('button');
-    toggleFormButton.className = 'btn-bp-outline w-full text-sm py-2'; // White outline button
-    toggleFormButton.textContent = 'Post a new comment';
+    toggleFormButton.className = 'btn-bp-icon ml-auto'; // Use same style as reply button, aligned to right
+    toggleFormButton.title = 'Post a new comment';
+    toggleFormButton.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><rect width="24" height="24" stroke="none" fill="#000000" opacity="0"/><g transform="matrix(0.77 0 0 0.77 12 12)" ><path style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: rgb(255,255,255); fill-rule: nonzero; opacity: 1;" transform=" translate(-13, -12.51)" d="M 4 1 C 1.804688 1 0 2.800781 0 5 L 0 15 C 0 17.195313 1.804688 19 4 19 L 6.3125 19 L 8.0625 23.375 C 8.207031 23.765625 8.582031 24.027344 9 24.027344 C 9.417969 24.027344 9.792969 23.765625 9.9375 23.375 L 11.6875 19 L 22 19 C 24.195313 19 26 17.195313 26 15 L 26 5 C 26 2.800781 24.195313 1 22 1 Z M 4 3 L 22 3 C 23.117188 3 24 3.882813 24 5 L 24 15 C 24 16.113281 23.113281 17 22 17 L 11 17 C 10.589844 16.996094 10.214844 17.242188 10.0625 17.625 L 9 20.28125 L 7.9375 17.625 C 7.785156 17.242188 7.410156 16.996094 7 17 L 4 17 C 2.886719 17 2 16.113281 2 15 L 2 5 C 2 3.882813 2.882813 3 4 3 Z" stroke-linecap="round" /></g></svg>`;
 
     toggleFormButton.addEventListener('click', (e) => {
         e.preventDefault();
-        toggleFormButton.classList.add('hidden'); // Hide the button
+        buttonWrapper.classList.add('hidden'); // Hide the button wrapper
         commentForm.classList.remove('hidden'); // Show the form
         commentForm.querySelector('textarea').focus();
     });
@@ -143,10 +144,15 @@ export const renderCommentSection = (container, messageId, comments, pagination)
         e.preventDefault();
         commentForm.classList.add('hidden'); // Hide the form
         commentForm.querySelector('textarea').value = ''; // Clear textarea
-        toggleFormButton.classList.remove('hidden'); // Show the button
+        buttonWrapper.classList.remove('hidden'); // Show the button wrapper
     });
 
-    formContainer.appendChild(toggleFormButton); // Always show toggle button initially
+    // Create a wrapper for the button to align it to the right
+    const buttonWrapper = document.createElement('div');
+    buttonWrapper.className = 'flex justify-end';
+    buttonWrapper.appendChild(toggleFormButton);
+
+    formContainer.appendChild(buttonWrapper); // Add button wrapper
     formContainer.appendChild(commentForm); // Append form (initially hidden)
 
     container.appendChild(formContainer);
