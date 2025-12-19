@@ -21,10 +21,12 @@ import {
     feedPrivateBtn,
     feedTrendingBtn,
     feedPostsBtn,
+    feedLikedBtn,
     mobileFeedLatestBtn,
     mobileFeedPrivateBtn,
     mobileFeedTrendingBtn,
     mobileFeedPostsBtn,
+    mobileFeedLikedBtn,
     mobileSearchToggle,
     globalSearchContainer,
     sidebarToggleBtn,
@@ -192,11 +194,13 @@ export const initEventListeners = () => {
     if(feedLatestBtn) feedLatestBtn.addEventListener('click', () => handleFeedChange('latest'));
     if(feedPrivateBtn) feedPrivateBtn.addEventListener('click', () => handleFeedChange('private'));
     if(feedTrendingBtn) feedTrendingBtn.addEventListener('click', () => handleFeedChange('trending'));
+    if(feedLikedBtn) feedLikedBtn.addEventListener('click', () => handleFeedChange('liked'));
     if(feedPostsBtn) feedPostsBtn.addEventListener('click', () => handleFeedChange('posts'));
 
     if(mobileFeedLatestBtn) mobileFeedLatestBtn.addEventListener('click', () => handleFeedChange('latest'));
     if(mobileFeedPrivateBtn) mobileFeedPrivateBtn.addEventListener('click', () => handleFeedChange('private'));
     if(mobileFeedTrendingBtn) mobileFeedTrendingBtn.addEventListener('click', () => handleFeedChange('trending'));
+    if(mobileFeedLikedBtn) mobileFeedLikedBtn.addEventListener('click', () => handleFeedChange('liked'));
     if(mobileFeedPostsBtn) mobileFeedPostsBtn.addEventListener('click', () => handleFeedChange('posts'));
     
     // Mobile Search Toggle
@@ -244,12 +248,14 @@ export const initEventListeners = () => {
             latest: feedLatestBtn,
             private: feedPrivateBtn,
             trending: feedTrendingBtn,
+            liked: feedLikedBtn,
             posts: feedPostsBtn
         };
         const mobileBtns = {
             latest: mobileFeedLatestBtn,
             private: mobileFeedPrivateBtn,
             trending: mobileFeedTrendingBtn,
+            liked: mobileFeedLikedBtn,
             posts: mobileFeedPostsBtn
         };
     

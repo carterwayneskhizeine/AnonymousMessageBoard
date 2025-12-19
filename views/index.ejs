@@ -81,6 +81,10 @@
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                         Trending
                     </button>
+                    <button id="feed-liked-btn" class="<%= user ? '' : 'hidden' %> flex items-center gap-3 px-3 py-2 rounded-md text-bp-text-muted hover:bg-bp-gray hover:text-bp-text transition-colors text-left w-full group">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 group-hover:scale-110 transition-transform" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd" /></svg>
+                        Liked
+                    </button>
                     <button id="feed-posts-btn" class="<%= user ? '' : 'hidden' %> flex items-center gap-3 px-3 py-2 rounded-md text-bp-text-muted hover:bg-bp-gray hover:text-bp-text transition-colors text-left w-full group">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                         Posts
@@ -179,6 +183,7 @@
             <div class="lg:hidden flex gap-2 overflow-x-auto pb-2 no-scrollbar">
                 <button id="mobile-feed-latest-btn" class="btn-bp-primary text-xs whitespace-nowrap px-4 py-1.5 h-auto rounded-full">Latest</button>
                 <button id="mobile-feed-trending-btn" class="btn-bp-outline text-xs whitespace-nowrap px-4 py-1.5 h-auto rounded-full bg-bp-dark">Trending</button>
+                <button id="mobile-feed-liked-btn" class="<%= user ? '' : 'hidden' %> btn-bp-outline text-xs whitespace-nowrap px-4 py-1.5 h-auto rounded-full bg-bp-dark">Liked</button>
                 <button id="mobile-feed-posts-btn" class="<%= user ? '' : 'hidden' %> btn-bp-outline text-xs whitespace-nowrap px-4 py-1.5 h-auto rounded-full bg-bp-dark">Posts</button>
                 <button id="mobile-feed-private-btn" class="<%= user ? '' : 'hidden' %> btn-bp-outline text-xs whitespace-nowrap px-4 py-1.5 h-auto rounded-full bg-bp-dark">Private</button>
             </div>

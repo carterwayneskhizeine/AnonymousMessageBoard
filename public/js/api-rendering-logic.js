@@ -47,6 +47,8 @@ export const fetchAndRenderMessages = async (page = 1) => {
         let url;
         if (currentFeedType === 'trending') {
             url = `/api/messages/trending?page=${page}&limit=5`;
+        } else if (currentFeedType === 'liked') {
+            url = `/api/messages/liked?page=${page}&limit=5`;
         } else {
             url = `/api/messages?page=${page}&limit=5`;
             if (currentFeedType && currentFeedType !== 'latest') {

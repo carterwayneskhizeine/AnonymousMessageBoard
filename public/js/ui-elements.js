@@ -24,10 +24,12 @@ export const feedLatestBtn = document.getElementById('feed-latest-btn');
 export const feedPrivateBtn = document.getElementById('feed-private-btn');
 export const feedTrendingBtn = document.getElementById('feed-trending-btn');
 export const feedPostsBtn = document.getElementById('feed-posts-btn');
+export const feedLikedBtn = document.getElementById('feed-liked-btn');
 export const mobileFeedLatestBtn = document.getElementById('mobile-feed-latest-btn');
 export const mobileFeedPrivateBtn = document.getElementById('mobile-feed-private-btn');
 export const mobileFeedTrendingBtn = document.getElementById('mobile-feed-trending-btn');
 export const mobileFeedPostsBtn = document.getElementById('mobile-feed-posts-btn');
+export const mobileFeedLikedBtn = document.getElementById('mobile-feed-liked-btn');
 
 // Search
 export const globalSearchContainer = document.getElementById('global-search-container');

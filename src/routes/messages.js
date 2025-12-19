@@ -176,6 +176,81 @@ module.exports = function(db, uploadsDir) {
     });
   });
 
+  // API: 获取用户点赞的消息
+  router.get('/liked', (req, res) => {
+    const { page = 1, limit = 5 } = req.query;
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const offset = (pageNum - 1) * limitNum;
+
+    if (!req.userId) {
+      return res.status(401).json({ messages: [], pagination: { total: 0 } });
+    }
+
+    const currentUserIdentifier = `user_${req.userId}`;
+    const searchPattern = `%"${currentUserIdentifier}"%`;
+
+    // 基础查询: 查找 likers 字段包含当前用户标识的消息
+    const baseSql = "FROM messages m WHERE m.likers LIKE ?";
+    const params = [searchPattern];
+
+    // 查询总数
+    const countSql = `SELECT COUNT(m.id) as total ${baseSql}`;
+
+    // 查询分页数据
+    const dataSql = `
+      SELECT m.*, EXISTS(
+        SELECT 1 FROM comments c WHERE c.message_id = m.id AND c.username = 'GoldieRill' AND c.is_deleted = 0
+      ) as has_ai_reply
+      ${baseSql}
+      ORDER BY m.timestamp DESC
+      LIMIT ? OFFSET ?
+    `;
+
+    db.get(countSql, params, (err, countResult) => {
+      if (err) {
+        res.status(500).json({ error: err.message });
+        return;
+      }
+
+      const total = countResult.total;
+      const totalPages = Math.ceil(total / limitNum);
+
+      db.all(dataSql, [...params, limitNum, offset], (err, rows) => {
+        if (err) {
+          res.status(500).json({ error: err.message });
+          return;
+        }
+
+        const processedRows = rows.map(row => {
+            let likers = [];
+            try {
+              likers = JSON.parse(row.likers || '[]');
+            } catch (e) {
+              console.error(`Error parsing likers for message ${row.id}:`, e);
+            }
+            return {
+              ...row,
+              has_ai_reply: row.has_ai_reply === 1,
+              userHasLiked: likers.includes(currentUserIdentifier)
+            };
+        });
+
+        res.json({
+          messages: processedRows,
+          pagination: {
+            page: pageNum,
+            limit: limitNum,
+            total,
+            totalPages,
+            hasNextPage: pageNum < totalPages,
+            hasPrevPage: pageNum > 1
+          }
+        });
+      });
+    });
+  });
+
   // API: 发布新消息
   router.post('/', (req, res) => {
     const { content, isPrivate, privateKey, hasImage, imageFilename, imageMimeType, imageSize } = req.body;
