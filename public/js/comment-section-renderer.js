@@ -105,18 +105,21 @@ export const renderCommentSection = (container, messageId, comments, pagination)
     }
     container.appendChild(commentsListContainer);
 
-    // 2. Comment Form or "Add Comment" Button
+    // 2. Comment Form and Toggle Button
     const formContainer = document.createElement('div');
     formContainer.className = 'mt-6';
     
     const commentForm = document.createElement('form');
-    commentForm.className = `flex flex-col gap-3`;
+    commentForm.className = `flex flex-col gap-3 hidden`; // Initially hidden
     commentForm.innerHTML = `
         <textarea
             class="input-bp min-h-[80px]"
             rows="2"
             placeholder="Add a comment..."></textarea>
-        <div class="flex justify-end">
+        <div class="flex justify-end gap-2">
+            <button type="button" class="btn-bp-outline text-sm py-1.5 px-5 comment-cancel-btn">
+                Cancel
+            </button>
             <button type="submit" class="btn-bp-primary text-sm py-1.5 px-5">
                 Post Comment
             </button>
@@ -124,25 +127,27 @@ export const renderCommentSection = (container, messageId, comments, pagination)
         <div class="comment-error-message hidden text-red-400 text-center font-bold p-3 bg-black rounded-lg border border-red-800" role="alert"></div>
     `;
 
-    if (flatComments.length > 0) {
-        // If there are comments, show a button to reveal the form
-        const addCommentButton = document.createElement('button');
-        addCommentButton.className = 'btn-bp-outline w-full text-sm py-2';
-        addCommentButton.textContent = 'Post a new comment';
-        commentForm.classList.add('hidden'); // Hide form initially
-        
-        addCommentButton.addEventListener('click', () => {
-            addCommentButton.classList.add('hidden');
-            commentForm.classList.remove('hidden');
-            commentForm.querySelector('textarea').focus();
-        });
+    const toggleFormButton = document.createElement('button');
+    toggleFormButton.className = 'btn-bp-outline w-full text-sm py-2'; // White outline button
+    toggleFormButton.textContent = 'Post a new comment';
 
-        formContainer.appendChild(addCommentButton);
-        formContainer.appendChild(commentForm);
-    } else {
-        // If there are no comments, show the form directly
-        formContainer.appendChild(commentForm);
-    }
+    toggleFormButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        toggleFormButton.classList.add('hidden'); // Hide the button
+        commentForm.classList.remove('hidden'); // Show the form
+        commentForm.querySelector('textarea').focus();
+    });
+
+    // Add event listener for the new Cancel button
+    commentForm.querySelector('.comment-cancel-btn').addEventListener('click', (e) => {
+        e.preventDefault();
+        commentForm.classList.add('hidden'); // Hide the form
+        commentForm.querySelector('textarea').value = ''; // Clear textarea
+        toggleFormButton.classList.remove('hidden'); // Show the button
+    });
+
+    formContainer.appendChild(toggleFormButton); // Always show toggle button initially
+    formContainer.appendChild(commentForm); // Append form (initially hidden)
 
     container.appendChild(formContainer);
 

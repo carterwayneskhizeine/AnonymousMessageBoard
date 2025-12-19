@@ -43,17 +43,11 @@ export const loadCommentsForMessage = async (messageId, page = 1, forceRefresh =
             hideMessageReplyButton(messageId);
             // Show the entire comment container when there are comments
             commentsContainer.classList.remove('hidden');
-            // Ensure comment form is visible when there are comments
-            const commentForm = commentsContainer.querySelector('form');
-            if (commentForm) {
-                commentForm.classList.remove('hidden');
-            }
         } else {
             // Use global showMessageReplyButton function
             showMessageReplyButton(messageId);
             // Hide the entire comment container when there are no comments
             commentsContainer.classList.add('hidden');
-            // Comment form is already visible (no hidden class), but container is hidden
         }
 
     } catch (error) {
