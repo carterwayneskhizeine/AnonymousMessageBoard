@@ -97,9 +97,7 @@ export const renderCommentSection = (container, messageId, comments, pagination)
     const commentsListContainer = document.createElement('div');
     commentsListContainer.className = 'comments-list';
 
-    if (flatComments.length === 0) {
-        commentsListContainer.innerHTML = '<p class="text-gray-500 text-center">No comments yet.</p>';
-    } else {
+    if (flatComments.length > 0) {
         flatComments.forEach(comment => {
             // Pass the comment, its parentId, and the commentMap to the element creator
             commentsListContainer.appendChild(createCommentElement(comment, messageId, comment.parentId, commentMap));
@@ -107,24 +105,46 @@ export const renderCommentSection = (container, messageId, comments, pagination)
     }
     container.appendChild(commentsListContainer);
 
-
-    // 2. Comment Form (always at the bottom)
+    // 2. Comment Form or "Add Comment" Button
+    const formContainer = document.createElement('div');
+    formContainer.className = 'mt-6';
+    
     const commentForm = document.createElement('form');
-    // Add margin top if there are comments, margin bottom if not.
-    commentForm.className = `flex flex-col gap-4 ${flatComments.length > 0 ? 'mt-8' : 'mb-8'}`;
+    commentForm.className = `flex flex-col gap-3`;
     commentForm.innerHTML = `
         <textarea
-            class="w-full p-4 bg-black border border-gray-800 rounded-lg focus:ring-2 focus:ring-gray-100 focus:outline-none transition-shadow text-gray-400 placeholder:text-gray-600"
-            rows="3"
+            class="input-bp min-h-[80px]"
+            rows="2"
             placeholder="Add a comment..."></textarea>
         <div class="flex justify-end">
-            <button type="submit" class="border border-gray-700 hover:border-gray-100 text-gray-400 hover:text-gray-100 font-bold py-2 px-4 rounded-lg transition-colors">
+            <button type="submit" class="btn-bp-primary text-sm py-1.5 px-5">
                 Post Comment
             </button>
         </div>
         <div class="comment-error-message hidden text-red-400 text-center font-bold p-3 bg-black rounded-lg border border-red-800" role="alert"></div>
     `;
-    container.appendChild(commentForm);
+
+    if (flatComments.length > 0) {
+        // If there are comments, show a button to reveal the form
+        const addCommentButton = document.createElement('button');
+        addCommentButton.className = 'btn-bp-outline w-full text-sm py-2';
+        addCommentButton.textContent = 'Post a new comment';
+        commentForm.classList.add('hidden'); // Hide form initially
+        
+        addCommentButton.addEventListener('click', () => {
+            addCommentButton.classList.add('hidden');
+            commentForm.classList.remove('hidden');
+            commentForm.querySelector('textarea').focus();
+        });
+
+        formContainer.appendChild(addCommentButton);
+        formContainer.appendChild(commentForm);
+    } else {
+        // If there are no comments, show the form directly
+        formContainer.appendChild(commentForm);
+    }
+
+    container.appendChild(formContainer);
 
 
     // 3. Comments Pagination

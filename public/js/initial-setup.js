@@ -16,12 +16,23 @@ import {
     privateKeyEntry,
     modalPrivateKey,
     cancelPrivate,
-    confirmPrivate
+    confirmPrivate,
+    feedLatestBtn,
+    feedPrivateBtn,
+    feedTrendingBtn,
+    mobileFeedLatestBtn,
+    mobileFeedPrivateBtn,
+    mobileFeedTrendingBtn,
+    mobileSearchToggle,
+    globalSearchContainer
 } from './ui-elements.js';
 import {
     isPrivateFilterMode,
     setIsPrivateFilterMode,
-    setCurrentPrivateKey
+    setCurrentPrivateKey,
+    currentFeedType,
+    setCurrentFeedType,
+    setCurrentPage
 } from './state.js';
 
 import {
@@ -159,4 +170,82 @@ export const initEventListeners = () => {
         messageTypeModal.close();
         await postMessageToAPI(content, true, privateKey);
     });
+
+    // --- Feed Navigation & Search ---
+    const handleFeedChange = (type) => {
+        if (currentFeedType === type) return;
+        setCurrentFeedType(type);
+        setCurrentPage(1); // Reset to page 1
+        
+        // Update UI active states
+        updateFeedButtonStyles(type);
+        
+        fetchAndRenderMessages(1);
+    };
+
+    if(feedLatestBtn) feedLatestBtn.addEventListener('click', () => handleFeedChange('latest'));
+    if(feedPrivateBtn) feedPrivateBtn.addEventListener('click', () => handleFeedChange('private'));
+    if(feedTrendingBtn) feedTrendingBtn.addEventListener('click', () => handleFeedChange('trending'));
+
+    if(mobileFeedLatestBtn) mobileFeedLatestBtn.addEventListener('click', () => handleFeedChange('latest'));
+    if(mobileFeedPrivateBtn) mobileFeedPrivateBtn.addEventListener('click', () => handleFeedChange('private'));
+    if(mobileFeedTrendingBtn) mobileFeedTrendingBtn.addEventListener('click', () => handleFeedChange('trending'));
+    
+    // Mobile Search Toggle
+    if(mobileSearchToggle && globalSearchContainer) {
+        mobileSearchToggle.addEventListener('click', () => {
+             globalSearchContainer.classList.toggle('hidden');
+             const input = globalSearchContainer.querySelector('input');
+             if(!globalSearchContainer.classList.contains('hidden') && input) {
+                 input.focus();
+             }
+        });
+    }
+
+    function updateFeedButtonStyles(activeType) {
+        const desktopBtns = {
+            latest: feedLatestBtn,
+            private: feedPrivateBtn,
+            trending: feedTrendingBtn
+        };
+        const mobileBtns = {
+            latest: mobileFeedLatestBtn,
+            private: mobileFeedPrivateBtn,
+            trending: mobileFeedTrendingBtn
+        };
+    
+        // Desktop Classes
+        const activeClassesDesktop = ['bg-bp-gold/10', 'text-bp-gold', 'font-medium'];
+        const inactiveClassesDesktop = ['text-bp-text-muted', 'hover:bg-bp-gray', 'hover:text-bp-text'];
+        
+        // Mobile Classes
+        // Active: btn-bp-primary (bg-bp-gold text-bp-black ...)
+        // Inactive: btn-bp-outline bg-bp-dark (border ... text-muted ...)
+        
+        Object.keys(desktopBtns).forEach(type => {
+            const btn = desktopBtns[type];
+            if(!btn) return;
+            if(type === activeType) {
+                btn.classList.add(...activeClassesDesktop);
+                btn.classList.remove('text-bp-text-muted', 'hover:bg-bp-gray', 'hover:text-bp-text');
+            } else {
+                btn.classList.remove(...activeClassesDesktop);
+                btn.classList.add('text-bp-text-muted', 'hover:bg-bp-gray', 'hover:text-bp-text');
+            }
+        });
+    
+        Object.keys(mobileBtns).forEach(type => {
+            const btn = mobileBtns[type];
+            if(!btn) return;
+            if(type === activeType) {
+                // To Primary
+                btn.classList.remove('btn-bp-outline', 'bg-bp-dark');
+                btn.classList.add('btn-bp-primary');
+            } else {
+                // To Outline
+                btn.classList.remove('btn-bp-primary');
+                btn.classList.add('btn-bp-outline', 'bg-bp-dark');
+            }
+        });
+    }
 };

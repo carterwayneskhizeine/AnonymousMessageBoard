@@ -88,8 +88,13 @@ export const renderMessage = (message) => {
             });
 
             // 添加图片信息
+            const fileNameDisplay = document.createElement('div');
+            fileNameDisplay.className = 'text-sm font-medium text-bp-text truncate mt-2 px-1';
+            fileNameDisplay.textContent = message.image_filename;
+            fileNameDisplay.title = message.image_filename;
+
             const imageInfo = document.createElement('div');
-            imageInfo.className = 'text-xs text-bp-text-muted mt-2 flex items-center gap-2';
+            imageInfo.className = 'text-xs text-bp-text-muted mt-1 flex items-center gap-2 px-1';
             imageInfo.innerHTML = `
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                 <span>Image</span>
@@ -99,6 +104,7 @@ export const renderMessage = (message) => {
             `;
 
             fileContainer.appendChild(img);
+            fileContainer.appendChild(fileNameDisplay);
             fileContainer.appendChild(imageInfo);
         } else if (isVideo) {
             // 显示视频播放器
@@ -115,8 +121,13 @@ export const renderMessage = (message) => {
             video.innerHTML = 'Your browser does not support the video tag.';
 
             // 添加视频信息
+            const fileNameDisplay = document.createElement('div');
+            fileNameDisplay.className = 'text-sm font-medium text-bp-text truncate mt-2 px-1';
+            fileNameDisplay.textContent = message.image_filename;
+            fileNameDisplay.title = message.image_filename;
+
             const videoInfo = document.createElement('div');
-            videoInfo.className = 'text-xs text-bp-text-muted mt-2 flex items-center gap-2';
+            videoInfo.className = 'text-xs text-bp-text-muted mt-1 flex items-center gap-2 px-1';
             videoInfo.innerHTML = `
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
                 <span>Video</span>
@@ -124,6 +135,7 @@ export const renderMessage = (message) => {
             `;
 
             fileContainer.appendChild(video);
+            fileContainer.appendChild(fileNameDisplay);
             fileContainer.appendChild(videoInfo);
         } else {
             // 显示文件下载链接 (File Card)
@@ -146,6 +158,7 @@ export const renderMessage = (message) => {
             const fileName = document.createElement('div');
             fileName.className = 'text-sm font-bold text-bp-text truncate mb-1';
             fileName.textContent = message.image_filename;
+            fileInfo.appendChild(fileName);
 
             const fileInfoText = document.createElement('div');
             fileInfoText.className = 'text-xs text-bp-text-muted flex gap-2';
@@ -154,6 +167,7 @@ export const renderMessage = (message) => {
                 fileInfoStr += ` • ${(message.image_size / 1024).toFixed(1)} KB`;
             }
             fileInfoText.textContent = fileInfoStr;
+            fileInfo.appendChild(fileInfoText);
 
             // 下载链接
             let downloadUrl = `/uploads/${message.image_filename}`;

@@ -17,7 +17,7 @@ export const toggleEditView = (id) => {
     }
 
     const messageElement = document.querySelector(`[data-message-id='${id}']`);
-    const contentContainer = messageElement.querySelector('.mb-2');
+    const contentContainer = messageElement.querySelector('.mb-4');
     const footer = messageElement.querySelector('.flex.justify-between');
 
     // Find the text content div (if it exists)
@@ -29,7 +29,7 @@ export const toggleEditView = (id) => {
 
     // Create an input area with the raw markdown
     const editInput = document.createElement('textarea');
-    editInput.className = 'w-full p-2 bg-black border border-gray-800 rounded-lg focus:ring-2 focus:ring-gray-100 focus:outline-none transition-shadow text-gray-200';
+    editInput.className = 'input-bp min-h-[150px] text-gray-200';
     editInput.value = originalMessage.content;
     editInput.rows = 8;
 

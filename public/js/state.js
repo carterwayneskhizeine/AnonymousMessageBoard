@@ -5,6 +5,7 @@ export let currentPage = 1;
 export let totalPages = 1;
 export let currentPrivateKey = '';
 export let isPrivateFilterMode = false;
+export let currentFeedType = 'latest';
 
 export function setMessages(newMessages) {
   messages = newMessages;
@@ -32,4 +33,8 @@ export function setCurrentPrivateKey(key) {
 
 export function setIsPrivateFilterMode(mode) {
     isPrivateFilterMode = mode;
+}
+
+export function setCurrentFeedType(type) {
+    currentFeedType = type;
 }

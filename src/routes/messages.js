@@ -13,7 +13,7 @@ const { getAIResponse } = require('../utils/ai-handler');
 module.exports = function(db, uploadsDir) {
   // API: 获取所有消息
   router.get('/', (req, res) => {
-    const { privateKey, page = 1, limit = 5 } = req.query;
+    const { privateKey, page = 1, limit = 5, type } = req.query;
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
     const offset = (pageNum - 1) * limitNum;
@@ -22,14 +22,17 @@ module.exports = function(db, uploadsDir) {
     let baseSql;
     let params = [];
 
-    // 逻辑调整：privateKey 优先于 userId
-    if (privateKey && privateKey.trim() !== '') {
+    // 逻辑调整：新增 type=private 过滤
+    if (type === 'private' && req.userId) {
+      // 仅显示当前登录用户的私有消息
+      baseSql = "FROM messages m WHERE m.is_private = 1 AND m.user_id = ?";
+      params = [req.userId];
+    } else if (privateKey && privateKey.trim() !== '') {
+      // 按 KEY 查询 (显示公共消息 + 匹配的私有消息)
       baseSql = "FROM messages m WHERE m.is_private = 0 OR (m.is_private = 1 AND m.private_key = ?)";
       params = [privateKey.trim()];
-    } else if (req.userId) {
-      baseSql = "FROM messages m WHERE m.is_private = 0 OR (m.is_private = 1 AND m.user_id = ?)";
-      params = [req.userId];
     } else {
+      // 默认/Latest: 仅显示公共消息 (不再混合显示登录用户的私有消息)
       baseSql = "FROM messages m WHERE m.is_private = 0";
     }
 

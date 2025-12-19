@@ -10,6 +10,7 @@ import {
 import {
     parseURLParams
 } from './pagination.js';
+import { initSearchHandler } from './search-handler.js';
 import './comment-styles.js';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -28,6 +29,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 4. 绑定所有其他的UI事件监听器
     initEventListeners();
+    
+    // 5. 绑定搜索事件
+    initSearchHandler();
 
     console.log("Application initialized successfully using ES Modules.");
 });

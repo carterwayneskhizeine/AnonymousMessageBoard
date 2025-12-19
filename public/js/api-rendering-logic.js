@@ -4,6 +4,7 @@ import {
     currentPrivateKey,
     currentUser,
     isPrivateFilterMode,
+    currentFeedType,
     setCurrentPage,
     setTotalPages,
     setCurrentPrivateKey,
@@ -44,6 +45,12 @@ export const fetchAndRenderMessages = async (page = 1) => {
 
         // 构建 URL
         let url = `/api/messages?page=${page}&limit=5`;
+        
+        // 添加 Feed 类型过滤
+        if (currentFeedType && currentFeedType !== 'latest') {
+            url += `&type=${currentFeedType}`;
+        }
+
         if (currentPrivateKey) {
             url += `&privateKey=${encodeURIComponent(currentPrivateKey)}`;
         }
@@ -110,5 +117,46 @@ export const fetchAndRenderMessages = async (page = 1) => {
         console.error('Error:', error);
         messageList.innerHTML = '<p class="text-red-500 text-center">Could not load messages.</p>';
         errorMessage.classList.add('hidden');
+    }
+};
+
+export const fetchAndRenderSearchResults = async (query, page = 1) => {
+    if (!query || query.trim() === '') {
+        // If query is empty, just fetch the latest messages
+        await fetchAndRenderMessages(1);
+        return;
+    }
+
+    try {
+        setCurrentPage(page);
+
+        const url = `/api/search?q=${encodeURIComponent(query)}&page=${page}&limit=5`;
+        const response = await fetch(url);
+
+        if (!response.ok) throw new Error('Failed to fetch search results.');
+
+        const data = await response.json();
+        setMessages(data.messages || []);
+        setTotalPages(data.pagination.totalPages || 1);
+
+        // Render results
+        messageList.innerHTML = '';
+        if (data.messages.length === 0) {
+            messageList.innerHTML = `<p class="text-center text-bp-text-muted">No results found for "${data.searchQuery}"</p>`;
+        } else {
+            data.messages.forEach(message => {
+                messageList.appendChild(renderMessage(message));
+                loadCommentsForMessage(message.id);
+            });
+        }
+
+        // Render pagination for search results
+        renderPagination(async (newPage) => {
+            await fetchAndRenderSearchResults(query, newPage);
+        });
+
+    } catch (error) {
+        console.error('Error fetching search results:', error);
+        messageList.innerHTML = '<p class="text-red-500 text-center">Could not load search results.</p>';
     }
 };

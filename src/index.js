@@ -21,6 +21,7 @@ const createAuthRoutes = require('./routes/auth');
 const createMessageRoutes = require('./routes/messages');
 const createCommentRoutes = require('./routes/comments');
 const createUploadRoutes = require('./routes/upload');
+const createSearchRoutes = require('./routes/search');
 
 
 // ==================== Initialization ====================
@@ -69,10 +70,12 @@ const authRoutes = createAuthRoutes(db);
 const messageRoutes = createMessageRoutes(db, uploadsDir);
 const commentRoutes = createCommentRoutes(db);
 const uploadRoutes = createUploadRoutes(upload, generalUpload, uploadsDir);
+const searchRoutes = createSearchRoutes(db);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/comments', commentRoutes);
+app.use('/api/search', searchRoutes);
 app.use('/api', uploadRoutes); // Must be after other /api routes
 
 

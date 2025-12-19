@@ -18,11 +18,17 @@
             <!-- Brand -->
             <div class="flex items-center gap-4">
                 <h1 class="text-xl font-bold tracking-tight text-white select-none cursor-default"><span class="text-bp-gold">Black</span>Pulse</h1>
-                <!-- Desktop Search placeholder -->
-                <div class="hidden md:block relative group">
+                <!-- Search Container -->
+                <div id="global-search-container" class="hidden md:block relative group transition-all duration-300 ease-in-out absolute md:relative top-20 md:top-auto left-4 right-4 md:left-auto md:right-auto z-40 md:z-auto">
                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 group-focus-within:text-bp-gold transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                    <input type="text" placeholder="Search..." class="bg-bp-dark border border-bp-gray rounded-full py-1.5 pl-9 pr-4 text-sm w-48 focus:w-64 transition-all focus:border-bp-gold outline-none placeholder-gray-600 text-gray-300">
+                    <input id="global-search-input" type="text" placeholder="Search..." class="bg-bp-dark border border-bp-gray rounded-full py-1.5 pl-9 pr-4 text-sm w-full md:w-48 focus:w-full md:focus:w-64 transition-all focus:border-bp-gold outline-none placeholder-gray-600 text-gray-300 shadow-lg md:shadow-none">
                 </div>
+                <!-- Mobile Search Toggle -->
+                <button id="mobile-search-toggle" class="md:hidden text-gray-400 hover:text-bp-gold focus:outline-none p-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </button>
             </div>
 
             <!-- User Area -->
@@ -54,15 +60,15 @@
             <div class="card-bp space-y-3 sticky top-24">
                 <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Feeds</h3>
                 <nav class="flex flex-col space-y-1">
-                    <button class="flex items-center gap-3 px-3 py-2 rounded-md bg-bp-gold/10 text-bp-gold font-medium transition-colors text-left w-full group">
+                    <button id="feed-latest-btn" class="flex items-center gap-3 px-3 py-2 rounded-md bg-bp-gold/10 text-bp-gold font-medium transition-colors text-left w-full group">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                         Latest
                     </button>
-                    <button class="flex items-center gap-3 px-3 py-2 rounded-md text-bp-text-muted hover:bg-bp-gray hover:text-bp-text transition-colors text-left w-full group">
+                    <button id="feed-private-btn" class="<%= user ? '' : 'hidden' %> flex items-center gap-3 px-3 py-2 rounded-md text-bp-text-muted hover:bg-bp-gray hover:text-bp-text transition-colors text-left w-full group">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
                         Private
                     </button>
-                    <button class="flex items-center gap-3 px-3 py-2 rounded-md text-bp-text-muted hover:bg-bp-gray hover:text-bp-text transition-colors text-left w-full group">
+                    <button id="feed-trending-btn" class="flex items-center gap-3 px-3 py-2 rounded-md text-bp-text-muted hover:bg-bp-gray hover:text-bp-text transition-colors text-left w-full group">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                         Trending
                     </button>
@@ -90,7 +96,7 @@
                         name="content"
                         class="input-bp min-h-[120px] resize-y"
                         rows="3"
-                        placeholder="What's on your mind? Use Markdown for rich text..."></textarea>
+                        placeholder="What's on your mind?"></textarea>
 
                      <!-- File Preview (Hidden by default) -->
                      <div class="flex flex-col gap-2">
@@ -153,9 +159,9 @@
 
             <!-- Mobile Filters (Horizontal Scroll) -->
             <div class="lg:hidden flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-                <button class="btn-bp-primary text-xs whitespace-nowrap px-4 py-1.5 h-auto rounded-full">Latest</button>
-                <button class="btn-bp-outline text-xs whitespace-nowrap px-4 py-1.5 h-auto rounded-full bg-bp-dark">Private</button>
-                <button class="btn-bp-outline text-xs whitespace-nowrap px-4 py-1.5 h-auto rounded-full bg-bp-dark">Trending</button>
+                <button id="mobile-feed-latest-btn" class="btn-bp-primary text-xs whitespace-nowrap px-4 py-1.5 h-auto rounded-full">Latest</button>
+                <button id="mobile-feed-private-btn" class="<%= user ? '' : 'hidden' %> btn-bp-outline text-xs whitespace-nowrap px-4 py-1.5 h-auto rounded-full bg-bp-dark">Private</button>
+                <button id="mobile-feed-trending-btn" class="btn-bp-outline text-xs whitespace-nowrap px-4 py-1.5 h-auto rounded-full bg-bp-dark">Trending</button>
             </div>
 
             <!-- Message List -->

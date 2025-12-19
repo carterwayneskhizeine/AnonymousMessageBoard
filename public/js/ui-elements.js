@@ -19,6 +19,18 @@ export const confirmPrivate = document.getElementById('confirm-private');
 export const cancelPrivate = document.getElementById('cancel-private');
 export const errorMessage = document.getElementById('error-message');
 
+// Feed Navigation Buttons
+export const feedLatestBtn = document.getElementById('feed-latest-btn');
+export const feedPrivateBtn = document.getElementById('feed-private-btn');
+export const feedTrendingBtn = document.getElementById('feed-trending-btn');
+export const mobileFeedLatestBtn = document.getElementById('mobile-feed-latest-btn');
+export const mobileFeedPrivateBtn = document.getElementById('mobile-feed-private-btn');
+export const mobileFeedTrendingBtn = document.getElementById('mobile-feed-trending-btn');
+
+// Search
+export const globalSearchContainer = document.getElementById('global-search-container');
+export const mobileSearchToggle = document.getElementById('mobile-search-toggle');
+
 // File upload elements
 export const fileUpload = document.getElementById('file-upload');
 export const uploadFileButton = document.getElementById('upload-file-button');
