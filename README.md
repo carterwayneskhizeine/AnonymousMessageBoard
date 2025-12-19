@@ -18,12 +18,14 @@ A feature-rich anonymous message board web application built with Node.js, Expre
 *   **Embedded Video Content**: Automatically embeds YouTube links pasted into messages as responsive video players.
 *   **File Upload Support**: Upload and display files in messages (one file per message, max 50MB). Images show previews, videos (e.g., MP4) are playable, and other files show download links.
 *   **Pagination with Google-Style Navigation**: Messages are displayed with Google search results-style pagination (e.g., < 1 2 3 4 5 ... 100 >). Each page shows 5 messages with previous/next buttons and direct page navigation.
-*   **Comment System with Infinite Reply Support**: Add comments to any page with unlimited nesting depth, featuring upvoting/downvoting, editing, and deletion capabilities.
 *   **Database Performance Optimization**: Built-in indexes for faster queries, better scalability for research and learning.
 *   **Responsive Design**: The application is designed to be accessible and usable across various devices, with mobile-friendly buttons.
 *   **Dockerized Deployment**: Easy setup and deployment using Docker and Docker Compose.
 *   **AI-Powered Comment Responses**: Users can mention `@goldierill` in comments to receive AI-generated replies based on the message context.
-*   **Trending Feed**: A "Trending" feed that uses a Reddit-style algorithm to sort messages based on comment activity and time-decay, allowing users to discover the most popular and engaging content dynamically.
+*   **Like System (Comments & Messages)**: Express your appreciation by liking comments and main messages. The 'like' button dynamically changes color when active.
+*   **Comment System with Infinite Reply Support**: Add comments to any page with unlimited nesting depth, featuring liking, editing, and deletion capabilities.
+*   **Trending Feed**: A "Trending" feed that uses a Reddit-style algorithm to sort messages based on the **total likes on comments** and time-decay, allowing users to discover the most popular and engaging content dynamically.
+*   **Liked Messages Feed**: Logged-in users can easily access a dedicated "Liked" feed, showcasing all messages they have personally liked.
 
 ## Tech Stack
 
@@ -106,6 +108,10 @@ Once the Docker containers are up and running, open your web browser and navigat
 *   **Post a Message**: Type your message (you can use Markdown!) in the text area and click "Post Message".
 *   **Edit a Message**: Click the "Edit" button next to a message. An edit box will appear pre-filled with the message's original Markdown content. Make your changes and click "Save".
 *   **Delete a Message**: Click the "Delete" button next to a message. Confirm your action to remove the message.
+
+### Liking Messages
+*   **Like a Message**: Click the "like" button below any message. The text will turn gold.
+*   **Unlike a Message**: Click the "like" button again to unlike the message. The text will revert to its original color.
 
 ### Private Messages
 *   **Post a Private Message**:
@@ -210,10 +216,10 @@ Once the Docker containers are up and running, open your web browser and navigat
     - Confirm deletion to remove the comment.
     *Note: Deleted comments are marked as deleted but may remain visible depending on settings.*
 
-*   **Vote on Comments**:
-    - Use the upvote (▲) and downvote (▼) buttons to express your opinion.
-    - Each user can vote once per comment.
-    - The comment score is displayed as the sum of votes.
+*   **Like Comments**:
+    - Click the "like" button below any comment to express your appreciation. The text will turn gold.
+    - Click the "like" button again to unlike the comment. The text will revert to its original color.
+    - The number of likes is displayed next to the button.
 
 *   **View Comment Threads**:
     - Comments are displayed in a nested tree structure.
@@ -260,26 +266,31 @@ curl -s "http://localhost:1989/api/messages"
 curl -s "http://localhost:1989/api/messages/trending"
 ```
 
-**3. Post a public message**
+**3. Get liked messages (requires authentication)**
+```bash
+curl -s "http://localhost:1989/api/messages/liked" -b cookies.txt
+```
+
+**4. Post a public message**
 ```bash
 curl -s -X POST "http://localhost:1989/api/messages" \
   -H "Content-Type: application/json" \
   -d "{\"content\": \"Your message here\"}"
 ```
 
-**4. Post a private message with KEY**
+**5. Post a private message with KEY**
 ```bash
 curl -s -X POST "http://localhost:1989/api/messages" \
   -H "Content-Type: application/json" \
   -d "{\"content\": \"Secret message\", \"isPrivate\": true, \"privateKey\": \"your-secret-key\"}"
 ```
 
-**5. View private messages with KEY**
+**6. View private messages with KEY**
 ```bash
 curl -s "http://localhost:1989/api/messages?privateKey=your-secret-key"
 ```
 
-**6. Get messages with pagination**
+**7. Get messages with pagination**
 ```bash
 # Get page 1 (default, 5 messages per page)
 curl -s "http://localhost:1989/api/messages?page=1&limit=5"
@@ -390,6 +401,13 @@ curl -s "http://localhost:1989/api/messages" \
   -b cookies.txt
 ```
 
+**4. Like/Unlike a message (requires authentication)**
+```bash
+curl -s -X POST "http://localhost:1989/api/messages/1/like" \
+  -H "Content-Type: application/json" \
+  -b cookies.txt
+```
+
 #### Comments API
 
 **1. Get comments for the current page**
@@ -428,21 +446,13 @@ curl -s -X PUT "http://localhost:1989/api/comments/123" \
 curl -s -X DELETE "http://localhost:1989/api/comments/123"
 ```
 
-**7. Vote on a comment (upvote)**
+**7. Like/Unlike a comment**
 ```bash
-curl -s -X POST "http://localhost:1989/api/comments/123/vote" \
-  -H "Content-Type: application/json" \
-  -d "{\"vote\": 1}"
+curl -s -X POST "http://localhost:1989/api/comments/123/like" \
+  -H "Content-Type: application/json"
 ```
 
-**8. Vote on a comment (downvote)**
-```bash
-curl -s -X POST "http://localhost:1989/api/comments/123/vote" \
-  -H "Content-Type: application/json" \
-  -d "{\"vote\": -1}"
-```
-
-**9. Get comments for a specific page**
+**8. Get comments for a specific page**
 ```bash
 curl -s "http://localhost:1989/api/comments?url=http://localhost:1989/specific-page"
 ```
@@ -781,6 +791,35 @@ The entire frontend JavaScript codebase was refactored from a collection of scri
 #### Trending Feed Feature
 The following modifications were made to implement the Trending feed, which sorts messages based on a hotness score.
 
+#### Message Liking & Liked Feed Feature
+The following modifications were made to implement the ability to like/unlike main messages and view a dedicated feed of liked messages:
+
+1.  **`src/database/init.js`**:
+    -   Added `likes` (INTEGER) and `likers` (TEXT JSON array) columns to the `messages` table.
+
+2.  **`src/routes/messages.js`**:
+    -   Added a new API endpoint: `POST /api/messages/:id/like` to toggle like status for messages.
+    -   Modified `GET /api/messages` and `GET /api/messages/trending` to include `likes` count and `userHasLiked` status in their responses.
+    -   Added a new API endpoint: `GET /api/messages/liked` to fetch all messages liked by the current logged-in user.
+
+3.  **`views/index.ejs`**:
+    -   Added new "Liked" filter buttons to both desktop and mobile navigation.
+
+4.  **`public/js/main-rendering-function.js`**:
+    -   Modified message rendering to include a text-based "like" button (gold when active) and a likes counter.
+
+5.  **`public/js/message-click-handler.js`**:
+    -   Added event handling logic for the new message "like" button, including calling the new API endpoint and refreshing messages.
+
+6.  **`public/js/ui-elements.js`**:
+    -   Exported new DOM element selectors for the "Liked" feed buttons.
+
+7.  **`public/js/initial-setup.js`**:
+    -   Added event listeners and styling updates for the new "Liked" feed buttons.
+
+8.  **`public/js/api-rendering-logic.js`**:
+    -   Modified `fetchAndRenderMessages` to call the new `GET /api/messages/liked` endpoint when the "Liked" feed is selected.
+
 1.  **`src/database/init.js`**:
     -   Added `comment_count` (INTEGER) and `hot_score` (REAL) columns to the `messages` table to store engagement metrics.
     -   Added `idx_messages_hot_score` index on the `hot_score` column to optimize sorting performance.
@@ -788,11 +827,11 @@ The following modifications were made to implement the Trending feed, which sort
 
 2.  **`src/utils/hot-score.js`**:
     -   New utility module created to house the `calculateHotScore` function.
-    -   This function implements a Reddit-style trending algorithm: `Score = log10(comment_count) + (timestamp / 45000)`, which balances popularity (comment count) with time decay.
+    -   This function implements a Reddit-style trending algorithm: `Score = log10(total_likes_on_comments) + (timestamp / 45000)`, which balances popularity (total likes on comments) with time decay.
 
 3.  **`src/routes/comments.js`**:
-    -   Modified the comment creation (`POST /`) and deletion (`DELETE /:id`) routes.
-    -   When a comment is added or removed, it now asynchronously updates the parent message's `comment_count` and recalculates its `hot_score`, keeping the trending rank up-to-date.
+    -   Modified the comment creation (`POST /`), deletion (`DELETE /:id`), and liking (`POST /:id/like`) routes.
+    -   When a comment is added, removed, or liked/unliked, it now asynchronously updates the parent message's `comment_count` (for comment count) and recalculates its `hot_score` based on the **sum of likes on all its comments**, keeping the trending rank up-to-date.
 
 4.  **`src/routes/messages.js`**:
     -   Added a new API endpoint: `GET /api/messages/trending`.
