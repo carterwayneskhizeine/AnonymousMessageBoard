@@ -13,6 +13,12 @@ COPY package*.json ./
 # Install dependencies, including devDependencies for the build step
 RUN npm install
 
+# Create vendor directory for showdown.min.js
+RUN mkdir -p public/js/vendor
+
+# Move showdown.min.js to public/js/vendor using 'cp' within the container
+RUN cp node_modules/showdown/dist/showdown.min.js public/js/vendor/showdown.min.js
+
 # Copy the rest of the application source code
 COPY . .
 

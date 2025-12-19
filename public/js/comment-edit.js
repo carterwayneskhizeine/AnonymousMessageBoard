@@ -19,8 +19,14 @@ export const handleEditComment = (commentId, messageId, container) => {
         return;
     }
 
-    // This is a simplified version. A full implementation would require fetching the raw markdown.
-    const currentText = textElement.textContent;
+    // Fetch the raw markdown from the hidden '.raw-comment-text' element.
+    const rawTextHolder = commentElement.querySelector('.raw-comment-text');
+    if (!rawTextHolder) {
+        alert('Error: Could not find the original comment text to edit.');
+        console.error(`Raw text holder for comment ${commentId} not found.`);
+        return;
+    }
+    const currentText = rawTextHolder.textContent;
 
     const editForm = document.createElement('form');
     editForm.className = 'mt-2';
