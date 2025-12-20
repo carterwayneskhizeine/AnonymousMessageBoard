@@ -29,9 +29,15 @@ export const updateUIForUser = (user) => {
         usernameDisplay.textContent = user.username;
 
         // Show User Specific Feed buttons
-        if (feedPrivateBtn) feedPrivateBtn.classList.remove('hidden');
-        if (feedLikedBtn) feedLikedBtn.classList.remove('hidden');
-        if (feedPostsBtn) feedPostsBtn.classList.remove('hidden');
+        if (feedPrivateBtn) {
+            feedPrivateBtn.classList.remove('hidden');
+        }
+        if (feedLikedBtn) {
+            feedLikedBtn.classList.remove('hidden');
+        }
+        if (feedPostsBtn) {
+            feedPostsBtn.classList.remove('hidden');
+        }
 
         if (mobileFeedPrivateBtn) mobileFeedPrivateBtn.classList.remove('hidden');
         if (mobileFeedLikedBtn) mobileFeedLikedBtn.classList.remove('hidden');
