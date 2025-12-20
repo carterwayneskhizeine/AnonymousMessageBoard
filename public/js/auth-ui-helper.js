@@ -5,7 +5,11 @@ import {
     privateKeyInput,
     sendKeyButton,
     feedPrivateBtn,
-    mobileFeedPrivateBtn
+    mobileFeedPrivateBtn,
+    feedLikedBtn,
+    feedPostsBtn,
+    mobileFeedLikedBtn,
+    mobileFeedPostsBtn
 } from './ui-elements.js';
 import {
     setCurrentUser
@@ -24,9 +28,14 @@ export const updateUIForUser = (user) => {
         userView.classList.remove('hidden');
         usernameDisplay.textContent = user.username;
 
-        // Show Private Feed buttons
+        // Show User Specific Feed buttons
         if (feedPrivateBtn) feedPrivateBtn.classList.remove('hidden');
+        if (feedLikedBtn) feedLikedBtn.classList.remove('hidden');
+        if (feedPostsBtn) feedPostsBtn.classList.remove('hidden');
+
         if (mobileFeedPrivateBtn) mobileFeedPrivateBtn.classList.remove('hidden');
+        if (mobileFeedLikedBtn) mobileFeedLikedBtn.classList.remove('hidden');
+        if (mobileFeedPostsBtn) mobileFeedPostsBtn.classList.remove('hidden');
 
         // 如果用户已登录，隐藏KEY输入框（因为会自动显示私有消息）
         if (!privateKeyInput.classList.contains('hidden')) {
@@ -48,8 +57,13 @@ export const updateUIForUser = (user) => {
         guestView.classList.remove('hidden');
         userView.classList.add('hidden');
 
-        // Hide Private Feed buttons
+        // Hide User Specific Feed buttons
         if (feedPrivateBtn) feedPrivateBtn.classList.add('hidden');
+        if (feedLikedBtn) feedLikedBtn.classList.add('hidden');
+        if (feedPostsBtn) feedPostsBtn.classList.add('hidden');
+
         if (mobileFeedPrivateBtn) mobileFeedPrivateBtn.classList.add('hidden');
+        if (mobileFeedLikedBtn) mobileFeedLikedBtn.classList.add('hidden');
+        if (mobileFeedPostsBtn) mobileFeedPostsBtn.classList.add('hidden');
     }
 };
