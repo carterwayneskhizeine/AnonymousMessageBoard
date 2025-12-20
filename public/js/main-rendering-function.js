@@ -285,7 +285,7 @@ wrapper.className = 'relative group/code';
 
     // Footer with timestamp and actions
     const footer = document.createElement('div');
-    footer.className = 'flex justify-between items-end mt-4 pt-4 border-t border-bp-gray/50';
+    footer.className = 'flex justify-between items-center mt-4 pt-4 border-t border-bp-gray/50';
 
     const timestamp = document.createElement('div');
     timestamp.className = 'text-xs text-bp-text-muted font-mono';
