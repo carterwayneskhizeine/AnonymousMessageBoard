@@ -302,6 +302,17 @@ wrapper.className = 'relative group/code';
     const actions = document.createElement('div');
     actions.className = 'flex gap-1 opacity-80 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200';
 
+    // Admin-only Private button
+    if (currentUser && currentUser.is_admin) {
+        const privateBtn = document.createElement('button');
+        privateBtn.textContent = 'P';
+        privateBtn.dataset.action = 'make-private';
+        privateBtn.dataset.id = message.id;
+        privateBtn.className = `transition-colors font-medium text-sm hover:text-bp-gold text-bp-text-muted px-1.5 py-0.5 rounded`;
+        privateBtn.title = 'Make message private';
+        actions.appendChild(privateBtn);
+    }
+
     // Like button
     const likeContainer = document.createElement('div');
     likeContainer.className = 'flex items-center gap-1'; // Adjusted for text button
@@ -327,14 +338,6 @@ wrapper.className = 'relative group/code';
     const replyButton = createButton('Reply', message.id, 'reply');
     replyButton.classList.add('hidden'); // Initially hidden
     actions.appendChild(replyButton);
-
-    // Admin-only Private button
-    if (currentUser && currentUser.is_admin) {
-        const privateBtn = createButton('P', message.id, 'make-private');
-        privateBtn.className = `transition-colors font-medium text-sm hover:text-bp-gold text-bp-text-muted px-1.5 py-0.5 rounded border border-bp-gray/30 hover:border-bp-gold/50`;
-        privateBtn.title = 'Make message private';
-        actions.appendChild(privateBtn);
-    }
 
     // Conditional rendering for Edit and Delete buttons
     if (currentUser && (currentUser.is_admin || currentUser.id === message.user_id)) {
