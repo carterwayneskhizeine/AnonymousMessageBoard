@@ -87,6 +87,8 @@ export const handleMessageClick = (e) => {
                 loadCommentsForMessage(id);
             }
         }
+    } else if (action === 'make-private') {
+        handleMakePrivate(id);
     }
 };
 
@@ -100,7 +102,7 @@ async function handleMessageLike(messageId) {
         if (!response.ok) {
             throw new Error('Failed to like message');
         }
-        
+
         // For now, just refresh all messages to show the change
         fetchAndRenderMessages();
 
@@ -108,4 +110,17 @@ async function handleMessageLike(messageId) {
         console.error('Failed to like message:', error);
         alert('An error occurred while liking the message.');
     }
+}
+
+function handleMakePrivate(messageId) {
+    const modal = document.getElementById('admin-private-modal');
+    const input = document.getElementById('admin-modal-private-key');
+
+    // Store the message ID in modal dataset
+    modal.dataset.messageId = messageId;
+
+    // Clear previous input and show modal
+    input.value = '';
+    modal.showModal();
+    input.focus();
 }

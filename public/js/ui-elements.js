@@ -77,3 +77,9 @@ export const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
 export const desktopSidebar = document.getElementById('desktop-sidebar');
 export const mainContent = document.getElementById('main-content');
 export const mainContentWrapper = document.getElementById('main-content-wrapper');
+
+// Admin Private Modal Elements
+export const adminPrivateModal = document.getElementById('admin-private-modal');
+export const adminModalPrivateKey = document.getElementById('admin-modal-private-key');
+export const adminCancelPrivate = document.getElementById('admin-cancel-private');
+export const adminConfirmPrivate = document.getElementById('admin-confirm-private');

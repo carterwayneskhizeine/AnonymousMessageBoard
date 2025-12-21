@@ -533,5 +533,57 @@ module.exports = function (db, uploadsDir) {
     });
   });
 
+  // API: Convert message to private (Admin only)
+  router.put('/:id/make-private', (req, res) => {
+    const { id } = req.params;
+    const { privateKey } = req.body;
+
+    // Check if user is admin
+    if (!req.isAdmin) {
+      return res.status(403).json({ error: 'Only administrators can make messages private' });
+    }
+
+    // Validate private key
+    if (!privateKey || privateKey.trim() === '') {
+      return res.status(400).json({ error: 'Private key is required' });
+    }
+
+    // Get message
+    db.get(`SELECT * FROM messages WHERE id = ?`, [id], (err, message) => {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+
+      if (!message) {
+        return res.status(404).json({ error: 'Message not found' });
+      }
+
+      if (message.is_private === 1) {
+        return res.status(400).json({ error: 'Message is already private' });
+      }
+
+      // Update message to private
+      const finalPrivateKey = privateKey.trim();
+      db.run(`UPDATE messages SET is_private = 1, private_key = ? WHERE id = ?`,
+        [finalPrivateKey, id], function (err) {
+        if (err) {
+          return res.status(500).json({ error: err.message });
+        }
+
+        if (this.changes === 0) {
+          return res.status(404).json({ error: 'Message not found' });
+        }
+
+        // Get updated message
+        db.get(`SELECT * FROM messages WHERE id = ?`, [id], (err, updatedMessage) => {
+          if (err) {
+            return res.status(500).json({ error: err.message });
+          }
+          res.status(200).json(updatedMessage);
+        });
+      });
+    });
+  });
+
   return router;
 }

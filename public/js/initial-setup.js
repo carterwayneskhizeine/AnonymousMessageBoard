@@ -32,7 +32,11 @@ import {
     sidebarToggleBtn,
     desktopSidebar,
     mainContent,
-    mainContentWrapper
+    mainContentWrapper,
+    adminPrivateModal,
+    adminModalPrivateKey,
+    adminCancelPrivate,
+    adminConfirmPrivate
 } from './ui-elements.js';
 import {
     isPrivateFilterMode,
@@ -177,6 +181,63 @@ export const initEventListeners = () => {
         const content = messageTypeModal.dataset.pendingContent;
         messageTypeModal.close();
         await postMessageToAPI(content, true, privateKey);
+    });
+
+    // Admin Private Modal Event Listeners
+    adminCancelPrivate.addEventListener('click', () => {
+        adminPrivateModal.close();
+        adminModalPrivateKey.value = '';
+    });
+
+    adminConfirmPrivate.addEventListener('click', async () => {
+        const privateKey = adminModalPrivateKey.value.trim();
+
+        if (!privateKey) {
+            alert('KEY cannot be empty!');
+            return;
+        }
+
+        const messageId = adminPrivateModal.dataset.messageId;
+        if (!messageId) {
+            console.error('No message ID found in modal');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/messages/${messageId}/make-private`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ privateKey })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to make message private');
+            }
+
+            const updatedMessage = await response.json();
+            console.log('Message made private successfully:', updatedMessage);
+
+            // Close modal
+            adminPrivateModal.close();
+            adminModalPrivateKey.value = '';
+
+            // Refresh messages to show the updated state
+            fetchAndRenderMessages();
+
+        } catch (error) {
+            console.error('Error making message private:', error);
+            alert(error.message || 'Failed to make message private');
+        }
+    });
+
+    // Allow Enter key to submit in admin private modal
+    adminModalPrivateKey.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            adminConfirmPrivate.click();
+        }
     });
 
     // --- Feed Navigation & Search ---

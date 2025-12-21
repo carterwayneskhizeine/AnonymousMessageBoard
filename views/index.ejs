@@ -308,6 +308,21 @@
 
     <!-- Modals -->
 
+    <!-- Admin Private Modal -->
+    <dialog id="admin-private-modal"
+        class="bg-bp-dark text-bp-text p-6 rounded-lg shadow-glow-strong border border-bp-gray backdrop:bg-black/90 max-w-sm w-full m-auto">
+        <h2 class="text-xl font-bold mb-4 text-white">Make Message Private</h2>
+        <p class="text-sm text-bp-text-muted mb-4">Set a KEY to convert this message to private:</p>
+        <div id="admin-private-key-entry">
+            <label for="admin-modal-private-key" class="block mb-2 text-sm font-bold text-gray-400">Secret KEY:</label>
+            <input type="text" id="admin-modal-private-key" placeholder="Enter custom KEY..." class="input-bp mb-4">
+            <div class="flex justify-end gap-2">
+                <button id="admin-cancel-private" class="btn-bp-outline text-xs">Cancel</button>
+                <button id="admin-confirm-private" class="btn-bp-primary text-xs">Confirm</button>
+            </div>
+        </div>
+    </dialog>
+
     <!-- Message Type Modal -->
     <dialog id="message-type-modal"
         class="bg-bp-dark text-bp-text p-6 rounded-lg shadow-glow-strong border border-bp-gray backdrop:bg-black/90 max-w-sm w-full m-auto">
