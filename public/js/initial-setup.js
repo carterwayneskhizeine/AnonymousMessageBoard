@@ -36,7 +36,9 @@ import {
     adminPrivateModal,
     adminModalPrivateKey,
     adminCancelPrivate,
-    adminConfirmPrivate
+    adminConfirmPrivate,
+    stackeditButton,
+    messageInput
 } from './ui-elements.js';
 import {
     isPrivateFilterMode,
@@ -79,6 +81,27 @@ export const initEventListeners = () => {
     uploadFileButton.addEventListener('click', () => {
         fileUpload.click();
     });
+
+    // --- StackEdit Event Listener ---
+    if (stackeditButton && typeof Stackedit !== 'undefined') {
+        const stackedit = new Stackedit();
+
+        stackeditButton.addEventListener('click', () => {
+            stackedit.openFile({
+                name: 'Message',
+                content: {
+                    text: messageInput.value,
+                    properties: {
+                        colorTheme: 'dark'
+                    }
+                }
+            });
+        });
+
+        stackedit.on('fileChange', (file) => {
+            messageInput.value = file.content.text;
+        });
+    }
 
 
     fileUpload.addEventListener('change', (e) => {
@@ -245,34 +268,34 @@ export const initEventListeners = () => {
         if (currentFeedType === type) return;
         setCurrentFeedType(type);
         setCurrentPage(1); // Reset to page 1
-        
+
         // Update UI active states
         updateFeedButtonStyles(type);
-        
+
         fetchAndRenderMessages(1);
     };
 
-    if(feedLatestBtn) feedLatestBtn.addEventListener('click', () => handleFeedChange('latest'));
-    if(feedPrivateBtn) feedPrivateBtn.addEventListener('click', () => handleFeedChange('private'));
-    if(feedTrendingBtn) feedTrendingBtn.addEventListener('click', () => handleFeedChange('trending'));
-    if(feedLikedBtn) feedLikedBtn.addEventListener('click', () => handleFeedChange('liked'));
-    if(feedPostsBtn) feedPostsBtn.addEventListener('click', () => handleFeedChange('posts'));
+    if (feedLatestBtn) feedLatestBtn.addEventListener('click', () => handleFeedChange('latest'));
+    if (feedPrivateBtn) feedPrivateBtn.addEventListener('click', () => handleFeedChange('private'));
+    if (feedTrendingBtn) feedTrendingBtn.addEventListener('click', () => handleFeedChange('trending'));
+    if (feedLikedBtn) feedLikedBtn.addEventListener('click', () => handleFeedChange('liked'));
+    if (feedPostsBtn) feedPostsBtn.addEventListener('click', () => handleFeedChange('posts'));
 
-    if(mobileFeedLatestBtn) mobileFeedLatestBtn.addEventListener('click', () => handleFeedChange('latest'));
-    if(mobileFeedPrivateBtn) mobileFeedPrivateBtn.addEventListener('click', () => handleFeedChange('private'));
-    if(mobileFeedTrendingBtn) mobileFeedTrendingBtn.addEventListener('click', () => handleFeedChange('trending'));
-    if(mobileFeedLikedBtn) mobileFeedLikedBtn.addEventListener('click', () => handleFeedChange('liked'));
-    if(mobileFeedPostsBtn) mobileFeedPostsBtn.addEventListener('click', () => handleFeedChange('posts'));
-    
+    if (mobileFeedLatestBtn) mobileFeedLatestBtn.addEventListener('click', () => handleFeedChange('latest'));
+    if (mobileFeedPrivateBtn) mobileFeedPrivateBtn.addEventListener('click', () => handleFeedChange('private'));
+    if (mobileFeedTrendingBtn) mobileFeedTrendingBtn.addEventListener('click', () => handleFeedChange('trending'));
+    if (mobileFeedLikedBtn) mobileFeedLikedBtn.addEventListener('click', () => handleFeedChange('liked'));
+    if (mobileFeedPostsBtn) mobileFeedPostsBtn.addEventListener('click', () => handleFeedChange('posts'));
+
     // Mobile Search Toggle
     const mobileSearchContainer = document.getElementById('mobile-search-container');
-    if(mobileSearchToggle && mobileSearchContainer) {
+    if (mobileSearchToggle && mobileSearchContainer) {
         mobileSearchToggle.addEventListener('click', () => {
-             mobileSearchContainer.classList.toggle('hidden');
-             const input = mobileSearchContainer.querySelector('input');
-             if(!mobileSearchContainer.classList.contains('hidden') && input) {
-                 input.focus();
-             }
+            mobileSearchContainer.classList.toggle('hidden');
+            const input = mobileSearchContainer.querySelector('input');
+            if (!mobileSearchContainer.classList.contains('hidden') && input) {
+                input.focus();
+            }
         });
     }
 
@@ -319,19 +342,19 @@ export const initEventListeners = () => {
             liked: mobileFeedLikedBtn,
             posts: mobileFeedPostsBtn
         };
-    
+
         // Desktop Classes
         const activeClassesDesktop = ['bg-bp-gold/10', 'text-bp-gold', 'font-medium'];
         const inactiveClassesDesktop = ['text-bp-text-muted', 'hover:bg-bp-gray', 'hover:text-bp-text'];
-        
+
         // Mobile Classes
         // Active: btn-bp-primary (bg-bp-gold text-bp-black ...)
         // Inactive: btn-bp-outline bg-bp-dark (border ... text-muted ...)
-        
+
         Object.keys(desktopBtns).forEach(type => {
             const btn = desktopBtns[type];
-            if(!btn) return;
-            if(type === activeType) {
+            if (!btn) return;
+            if (type === activeType) {
                 btn.classList.add(...activeClassesDesktop);
                 btn.classList.remove('text-bp-text-muted', 'hover:bg-bp-gray', 'hover:text-bp-text');
             } else {
@@ -339,11 +362,11 @@ export const initEventListeners = () => {
                 btn.classList.add('text-bp-text-muted', 'hover:bg-bp-gray', 'hover:text-bp-text');
             }
         });
-    
+
         Object.keys(mobileBtns).forEach(type => {
             const btn = mobileBtns[type];
-            if(!btn) return;
-            if(type === activeType) {
+            if (!btn) return;
+            if (type === activeType) {
                 // To Primary
                 btn.classList.remove('btn-bp-outline', 'bg-bp-dark');
                 btn.classList.add('btn-bp-primary');

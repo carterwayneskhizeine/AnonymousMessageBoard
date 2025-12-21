@@ -9,6 +9,7 @@ export const keyButton = document.getElementById('key-button');
 export const privateKeyInput = document.getElementById('private-key-input');
 export const sendKeyButton = document.getElementById('send-key-button');
 export const postMessageButton = document.getElementById('post-message-button');
+export const stackeditButton = document.getElementById('stackedit-button');
 export const messageTypeModal = document.getElementById('message-type-modal');
 export const publicOption = document.getElementById('public-option');
 export const privateOption = document.getElementById('private-option');

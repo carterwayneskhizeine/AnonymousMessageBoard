@@ -89,6 +89,21 @@ export const handleMessageClick = (e) => {
         }
     } else if (action === 'make-private') {
         handleMakePrivate(id);
+    } else if (action === 'md') {
+        const messageElement = document.querySelector(`[data-message-id='${id}']`);
+        const textarea = messageElement.querySelector('textarea');
+        if (textarea && typeof Stackedit !== 'undefined') {
+            const stackedit = new Stackedit();
+            stackedit.openFile({
+                name: 'Edit Message',
+                content: {
+                    text: textarea.value
+                }
+            });
+            stackedit.on('fileChange', (file) => {
+                textarea.value = file.content.text;
+            });
+        }
     }
 };
 

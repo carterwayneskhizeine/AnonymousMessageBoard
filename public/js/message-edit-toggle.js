@@ -36,8 +36,11 @@ export const toggleEditView = (id) => {
     // Create new action buttons
     const saveButton = createButton('Save', id, 'save');
     const cancelButton = createButton('Cancel', id, 'cancel');
+    const mdButton = createButton('StackEdit', id, 'md');
+
     const newActions = document.createElement('div');
     newActions.className = 'flex gap-2 mt-2 self-end';
+    newActions.appendChild(mdButton);
     newActions.appendChild(saveButton);
     newActions.appendChild(cancelButton);
 

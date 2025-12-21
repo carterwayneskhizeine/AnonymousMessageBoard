@@ -245,6 +245,19 @@
                                     </svg>
                                 </button>
 
+                                <!-- StackEdit Trigger -->
+                                <button type="button" id="stackedit-button"
+                                    class="btn-bp-outline h-9 flex items-center gap-2 px-3 text-sm group"
+                                    title="Edit with StackEdit">
+                                    <svg xmlns="http://www.w3.org/2000/svg"
+                                        class="h-4 w-4 text-bp-text-muted group-hover:text-bp-gold transition-colors"
+                                        fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                    <span>MD</span>
+                                </button>
+
                                 <button type="submit" id="post-message-button"
                                     class="btn-bp-primary h-9 flex items-center gap-2 px-5 text-sm">
                                     <span>Post</span>
@@ -377,6 +390,7 @@
     </dialog>
 
     <script src="/js/vendor/showdown.min.js?v=<%= Date.now() %>"></script>
+    <script src="/js/vendor/stackedit.min.js?v=<%= Date.now() %>"></script>
     <script type="module" src="/js/main.js?v=<%= Date.now() %>"></script>
 </body>
 

@@ -17,7 +17,8 @@
     "express-session": "^1.18.0",
     "multer": "^2.0.2",
     "showdown": "^2.1.0",
-    "sqlite3": "^5.1.6"
+    "sqlite3": "^5.1.6",
+    "stackedit-js": "^1.0.7"
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.10",
