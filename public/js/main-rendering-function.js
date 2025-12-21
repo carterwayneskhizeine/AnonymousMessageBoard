@@ -8,7 +8,8 @@ import {
     loadCommentsForMessage
 } from './comment-loader.js';
 import {
-    currentUser
+    currentUser,
+    currentFeedType
 } from './state.js';
 
 
@@ -302,8 +303,8 @@ wrapper.className = 'relative group/code';
     const actions = document.createElement('div');
     actions.className = 'flex gap-1 opacity-80 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200';
 
-    // Admin-only Private button
-    if (currentUser && currentUser.is_admin) {
+    // Admin-only Private button (only in latest mode)
+    if (currentUser && currentUser.is_admin && currentFeedType === 'latest') {
         const privateBtn = document.createElement('button');
         privateBtn.textContent = 'P';
         privateBtn.dataset.action = 'make-private';
