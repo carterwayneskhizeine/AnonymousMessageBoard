@@ -5,8 +5,7 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "build:css": "tailwindcss -i ./src/input.css -o ./public/style.css",
-    "postinstall": "npx update-browserslist-db@latest"
+    "build:css": "tailwindcss -i ./src/input.css -o ./public/style.css"
   },
   "dependencies": {
     "axios": "^1.7.2",

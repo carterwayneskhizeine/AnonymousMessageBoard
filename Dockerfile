@@ -13,6 +13,8 @@ COPY package*.json ./
 # Install dependencies, including devDependencies for the build step
 RUN npm install
 
+RUN npm install && npx update-browserslist-db@latest
+
 # Create vendor directory for showdown.min.js
 RUN mkdir -p public/js/vendor
 
